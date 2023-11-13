@@ -2,9 +2,9 @@ import numpy as np
 import pandas as pd
 
 class GlobalParameters:
-    scenario_probabilities = np.array([0.2,0.2,0.6])
-    smolt_upper_bound = 200000
-    smolt_lower_bound = 5000
+    scenario_probabilities = np.array([0.2,0.2,0.6]) #Probability for every scenario
+    smolt_upper_bound = 200000 #Upper bound for smolt deployed
+    smolt_lower_bound = 5000 #Lower bound of smolt deployed
     max_harvest = 2000 #Max biomass that can be harvested in any period in tons
     min_biomass = 100 #Minimum amount of biomass that can be harvested if biomass is harvested in tons
     max_biomass_company = 100000000 #Max biomass that can be havested across the company in tons, currently unlimited
