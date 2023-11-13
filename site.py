@@ -14,6 +14,8 @@ class Site:
         self.capacity = capacity
         self.init_biomass = init_biomass
         self.growth_data_frame = self.calculate_growth_frame()
+        self.harvest_sets = None #TODO: define
+        self.growth_sets = None #TODO: define
 
     def G(self, temp, weight):
         if weight == 0:
@@ -36,4 +38,5 @@ class Site:
                     growth_array[i][j][1] = growth_factor
 
         return growth_array
+
 
