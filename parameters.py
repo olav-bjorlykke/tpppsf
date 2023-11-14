@@ -3,7 +3,7 @@ import pandas as pd
 
 class GlobalParameters:
     scenario_probabilities = np.array([0.2,0.2,0.6]) #Probability for every scenario
-    smolt_deployment_upper_bound = 1000000 #Upper bound for smolt deployed
+    smolt_deployment_upper_bound = 3000000 #Upper bound for smolt deployed
     smolt_deployment_lower_bound = 10000 #Lower bound of smolt deployed
     max_harvest = 2000 * 1000 #Max biomass that can be harvested in any period in tons
     min_harvest = 100 *1000 #Minimum amount of biomass that can be harvested if biomass is harvested in tons
@@ -18,7 +18,7 @@ class GlobalParameters:
     min_fallowing_periods = 2
     max_fallowing_periods = 36
     growth_factor = 1.3 #TODO: This will have to be changed and put into its own set of preprocessing
-    max_periods_deployed = 24
+    max_periods_deployed = 12
     temp_growth_period = 6 #TODO: implement this stochastically
     bigM = 100000000
 
