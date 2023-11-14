@@ -2,26 +2,46 @@ import gurobipy as gp
 from gurobipy import GRB
 from parameters import GlobalParameters
 
+
+"""
+EXPLANATION OF MODEL:
+In this file we see an optimization model using gurobi that solves the tactical planning problem in salmon farming for a single site.
+"""
+
+
+#Importing parameters from the global parameters file
 parameters = GlobalParameters
 
+#Crating variables to contain the size of different sets
 f_size = 1 #TODO:Change to be the correct size and connected to where it is declared
 l_size = 1 #TODO: Change to be number of locations
 t_size = parameters.number_periods
 s_size = parameters.scenario_probabilities.size
 G = 1.2 #TODO: implement on a per site and per period basis
 
+#Creating an instance of the gurobi model object
 model = gp.Model("single site solution")
 
+"""
+DECLARING VARIABLES
+In this section we declare the necesarry variable for the model
+"""
 x = model.addVars(f_size, t_size, t_size, s_size, vtype=GRB.CONTINUOUS, lb=0)
 y = model.addVars(f_size, t_size, vtype=GRB.CONTINUOUS, lb=0)
 w = model.addVars(f_size, t_size, t_size, s_size, vtype=GRB.CONTINUOUS, lb=0)
 
+#Declaring the binary decision variables
 deploy_type_bin = model.addVars(f_size, t_size, vtype=GRB.BINARY)
 deploy_bin = model.addVars(t_size, vtype=GRB.BINARY)
 harvest_bin = model.addVars(t_size, s_size, vtype=GRB.BINARY)
 employ_bin = model.addVars( t_size, s_size, vtype=GRB.BINARY)
 
 
+"""
+OBJECTIVE
+In this section we declare the objective fucntion for the model
+"""
+#Setting the objective
 model.setObjective( #This is the objective (5.2) - which represents the objective for biomass maximization
         gp.quicksum(
             parameters.scenario_probabilities[s] *
@@ -35,6 +55,12 @@ model.setObjective( #This is the objective (5.2) - which represents the objectiv
     )
     ,GRB.MAXIMIZE
 )
+
+"""
+CONSTRAINTS
+In this section we declare the constraints of the model, each constraint is labeled with a number and has mathematical equivalent in Bjorlykke & Vassbotten 2023
+"""
+
 
 #TODO: Add smolt deployment constraints
 model.addConstrs(#This is the constraint (5.4) - which restricts the deployment of smolt to an upper and lower bound, while forcing the binary deploy variable
@@ -135,7 +161,8 @@ model.addConstrs(
 
 
 """
-Testing constraint
+TESTING CONSTRAINTS
+In this section we see some testing constraints, they are employed during the development of the model to ensure that the model works as specified
 """
 
 
@@ -155,21 +182,12 @@ model.addConstrs( #TODO:This is a second forcing constraint that is not in the m
     for s in range(s_size)
 )
 
-
+#Running the opimize method to solve the problem
 model.optimize()
 
 """
-if model.status == GRB.OPTIMAL:
-    print("Optimal solution found:")
-    # Print values of continuous variables w
-    print("Values of w:")
-    for s in range(s_size):
-        for f in range(f_size):
-            for t_hat in range(t_size):
-                for t in range(t_hat,t_size):
-                    print(f"w[{f},{t_hat},{t},{s}] = {w[f,t_hat, t, s].x}")
+PRINTING THE SOLUTION
 """
-
 if model.status == GRB.OPTIMAL:
         print("Optimal solution found:")
         # Print values of continuous variables w
