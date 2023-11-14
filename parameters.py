@@ -19,6 +19,7 @@ class GlobalParameters:
     max_fallowing_periods = 36
     growth_factor = 1.3 #TODO: This will have to be changed and put into its own set of preprocessing
     max_periods_deployed = 12
+    number_periods = 60
     temp_growth_period = 6 #TODO: implement this stochastically
     bigM = 100000000
 

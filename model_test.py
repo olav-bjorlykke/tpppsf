@@ -8,7 +8,7 @@ parameters = GlobalParameters
 
 f_size = 1 #TODO:Change to be the correct size and connected to where it is declared
 l_size = 1 #TODO: Change to be number of locations
-t_size = constants.NUMBER_PERIODS
+t_size = parameters.number_periods
 s_size = parameters.scenario_probabilities.size
 G = 1.2 #TODO: implement on a per site and per period basis
 
