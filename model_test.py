@@ -1,7 +1,5 @@
 import gurobipy as gp
 from gurobipy import GRB
-
-import constants
 from parameters import GlobalParameters
 
 parameters = GlobalParameters
