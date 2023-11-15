@@ -14,11 +14,9 @@ site = Site(
     capacity=1000,
 )
 
-pd.set_option('display.max_rows', None)
-pd.set_option('display.max_columns', None)
-
-print(site.weight_frame)
-print(site.growth_frame)
+print(input.temperatures_df)
+print(input.TGC_df)
+print(input.mortality_rates_df)
 
 
 

@@ -1,17 +1,24 @@
 import gurobipy as gp
 from gurobipy import GRB
-from parameters import GlobalParameters
 import numpy as np
-import pandas as pd
 from parameters import GlobalParameters
 from input_data import InputData
 from site_structure import Site
 
+"""
+EXPLANATION: 
+This file contains a model that solves the tactical production planning problem for a single site using Gurobi. 
+At the top it also contains the necesarry input variables from the rest of the directory
+"""
 
+
+
+#Declaring an instance of the input data, to have access to input data
 input =InputData()
 
+#Declaring an instance of the site class to get site spesific information
 site = Site(
-    temperatures=np.tile(input.temperatures_df.iloc[0].astype(float).to_numpy(),5),
+    temperatures=np.tile(input.temperatures_df.iloc[0].to_numpy(),5),
     TGC_array=input.TGC_df.iloc[0].astype(float).to_numpy(),
     init_biomass=500,
     capacity=1000,
