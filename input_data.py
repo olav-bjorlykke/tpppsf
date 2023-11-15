@@ -6,13 +6,17 @@ class InputData:
     """
     The input Data class reads in and stores the input data in a pandas Dataframe, making it more accessible
     """
-    temperatures = None
-    TGC = None
-    mortality_rates = None
+    #Input variables
+    temperatures_df = None
+    TGC_df = None
+    mortality_rates_df = None
 
     def __init__(self):
-        pass
+        self.temperatures_df = self.read_input_temperatures("./data/temps_aasen.txt")
+        self.TGC_df = self.read_input_tgc("./data/tgc_aasen.txt")
+        self.mortality_rates_df = self.read_input_mortality_rates("./data/mortality_aasen_new.txt")
 
+    #Functions for reading in data from file:
     def read_input_temperatures(self,filepath):
         file = open(filepath, "r")
         data = file.readlines()
