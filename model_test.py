@@ -1,6 +1,22 @@
 import gurobipy as gp
 from gurobipy import GRB
 from parameters import GlobalParameters
+import numpy as np
+import pandas as pd
+from parameters import GlobalParameters
+from input_data import InputData
+from site_structure import Site
+
+
+input =InputData()
+
+site = Site(
+    temperatures=np.tile(input.temperatures_df.iloc[0].astype(float).to_numpy(),5),
+    TGC_array=input.TGC_df.iloc[0].astype(float).to_numpy(),
+    init_biomass=500,
+    capacity=1000,
+)
+
 
 
 """
@@ -126,7 +142,7 @@ model.addConstrs( # This is constraint (5.9) - which ensures that biomass x = bi
 )
 
 model.addConstrs(#This represents the constraint (5.10) - which ensures biomass growth in the growth period
-    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*G #TODO:Introduce scenario and period specific G
+    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*site.growth_frame.iloc[t_hat][t] #TODO:Introduce scenario and period specific G
     for t_hat in range(t_size -1)
     for f in range(f_size)
     for t in range(t_hat,min(t_hat+parameters.temp_growth_period, t_size - 1))
@@ -134,7 +150,7 @@ model.addConstrs(#This represents the constraint (5.10) - which ensures biomass 
 )
 
 model.addConstrs(#This is the constraint (5.11) - Which tracks the biomass employed in the harvest period
-    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*G - w[f,t_hat,t,s] #TODO:Introduce scenario and period specific G
+    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*site.growth_frame.iloc[t_hat][t] - w[f,t_hat,t,s] #TODO:Introduce scenario and period specific G
     for t_hat in range(t_size -1)
     for f in range(f_size)
     for t in range(min(t_hat+parameters.temp_growth_period, t_size - 1), min(t_hat+parameters.max_periods_deployed, t_size - 1))

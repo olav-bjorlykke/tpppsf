@@ -7,6 +7,7 @@ class Site:
     growth_sets = None  # TODO: define
     number_periods = 60  # TODO: set as an input parameter
     max_periods_deployed = 19  # TODO: Set as an input parameter
+
     def __init__(self,
                  temperatures,
                  capacity,
