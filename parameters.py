@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 
 class GlobalParameters:
-    scenario_probabilities = np.array([0.2,0.2,0.6]) #Probability for every scenario
     smolt_deployment_upper_bound = 3000000 #Upper bound for smolt deployed
     smolt_deployment_lower_bound = 10000 #Lower bound of smolt deployed
     max_harvest = 2000 * 1000 #Max biomass that can be harvested in any period in tons
@@ -11,7 +10,7 @@ class GlobalParameters:
     expected_production_loss = 0.005 #Expected loss per period
     MAB_company_limit = 16488 * 1000 #Max biomass deployed across the company
     MAB_site_limit = 3000 * 1000 #TODO: This is a placeholder, get the real thing from the site datastructure
-    smolt_type_df = pd.DataFrame(
+    smolt_type_df = pd.DataFrame( #All possible smolt type and weights, with corresponding number of smolt per kilo
         data=[[100,10],[150,6.66],[250,4]],
         columns=["weight","num-smolt-kilo"]
     )
