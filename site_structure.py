@@ -90,7 +90,6 @@ class Site:
         :return: weight_df  -  an array containing expected weight development for every possible release period and subsequent growth and harvest periods
         """
         #Defining a weight array to contain the calculated data
-        temp_array = np.tile(temp_array, 5) #TODO: Remove this and define the scenario temperatures for 60 periods
         weight_array = np.zeros((self.number_periods, self.number_periods))
         for i in range(self.number_periods):
             #Iterate through all possible release periods i and set the initial weight

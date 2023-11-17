@@ -8,6 +8,8 @@ from scenarios import Scenarios
 
 input =InputData()
 
+print(input.temperatures_df)
+
 scenarios_test = Scenarios(input.temperatures_df)
 
 
@@ -29,24 +31,6 @@ print(site_test.growth_frames)
 
 
 
-"""
-site = Site(
-    temperatures=np.tile(input.temperatures_df.iloc[0].astype(float).to_numpy(),5),
-    TGC_array=input.TGC_df.iloc[0].astype(float).to_numpy(),
-    init_biomass=500,
-    capacity=1000,
-)
-
-print(input.temperatures_df)
-print(input.TGC_df)
-print(input.mortality_rates_df)
-
-pd.set_option('display.max_rows', None)
-pd.set_option('display.max_columns', None)
-
-print(site.growth_frames.loc["250"])
-print(site.growth_frames.loc["150"])
-"""
 
 
 
