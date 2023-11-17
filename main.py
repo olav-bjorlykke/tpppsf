@@ -24,7 +24,7 @@ site_test = Site(
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 
-print(site_test.growth_frames)
+print(site_test.growth_frame_per_scenario)
 
 
 

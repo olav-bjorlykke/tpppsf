@@ -14,7 +14,7 @@ class Site:
     max_periods_deployed = 19  # TODO: Set as an input parameter    #Max number of sets that a cohort can be deployed
     capacity = None
     init_biomass = None
-    growth_frames = None
+    growth_frame_per_scenario = None
 
     #Parameters for calculations within this class
     TGC_array = None
@@ -34,9 +34,18 @@ class Site:
         self.init_biomass = init_biomass                                          #Initial biomass at the site, i.e biomass in the first period
         self.possible_smolt_weights = possible_smolt_weights                                 #Global parameters object containing the global parameters
         self.scenario_temperatures = scenario_temperatures
-        self.growth_frames = self.calculate_growth_frame_for_scenarios_and_smolt_weights(possible_smolt_weights, scenario_temperatures)
+        self.growth_frame_per_scenario = self.calculate_growth_frame_for_scenarios_and_smolt_weights(possible_smolt_weights, scenario_temperatures)
 
     def calculate_growth_frame_for_scenarios_and_smolt_weights(self, smolt_weights, scenarios_temperatures):
+        """
+        EXPLANATION: Calculates the growth factor, for all smolt weights, for very scenario, release period and subsequent growth periods.
+
+        :param smolt_weights: An array containing all possible smolt weights for release
+        :param scenarios_temperatures: A dataframe containing temperaturs for all scenarios
+        :return: growth_frame_all_scenarios_and_weights - a 4-D dataframe with the data described in the explanation.
+        """
+
+
         data_storage = []
         for weight in smolt_weights:
             scenario_growth_frames_given_weight = self.calculate_growth_frame_for_scenarios(weight, scenarios_temperatures)
@@ -46,10 +55,18 @@ class Site:
         return growth_frame_all_scenarios_and_weights
 
     def calculate_growth_frame_for_scenarios(self, smolt_weight, scenarios_temperatures):
+        """
+        EXPLANATION: Calculates the growth factor for every period, following every possible release in every scenario for a given smolt weight.
+
+        :param smolt_weight: The weight of the smolt at release
+        :param scenarios_temperatures: a dataframe containing the temperatures for all scenarios across the planning period
+        :return: growth_frame_all_scenarios - a 3-D dataframe containing the growth factor for every period, following every release and every scenario.
+        """
+
         data_storage = []
         for i in range(len(scenarios_temperatures.index)):
             temp_array = scenarios_temperatures.iloc[i]
-            scenario_growth_frame = self.calculate_growth_frame(self.calculate_weight_frame(temp_array,smolt_weight))
+            scenario_growth_frame = self.calculate_growth_frame_from_weight_frame(self.calculate_weight_frame(temp_array, smolt_weight))
             data_storage.append(scenario_growth_frame)
 
 
@@ -57,8 +74,7 @@ class Site:
         growth_frame_all_scenarios = pd.concat(data_storage, keys=scenarios_temperatures.index)
         return growth_frame_all_scenarios
 
-
-    def growth_factor(self, weight, TGC, temperature, duration): #TODO:put into its own class or set of functions
+    def calculate_growth_factor(self, weight, TGC, temperature, duration): #TODO:put into its own class or set of functions
         """
         A function for calculating the growth factor for one period
         :param weight: the weight of an individual salmon in the growth period
@@ -71,7 +87,7 @@ class Site:
         G = new_weight/weight
         return G
 
-    def weight_growth(self, weight, TGC, temperature, duration): #TODO: put into its own class or set of fucntions along with growth factor
+    def calculate_weight_growth(self, weight, TGC, temperature, duration): #TODO: put into its own class or set of fucntions along with growth factor
         """
         A function calculating the weight of a single salmon in period t+1, given the weight in period t. The calculation is based on Aasen(2021) and Thorarensen & Farrel (2011)
         :param weight: weight in period t
@@ -90,35 +106,38 @@ class Site:
         :return: weight_df  -  an array containing expected weight development for every possible release period and subsequent growth and harvest periods
         """
         #Defining a weight array to contain the calculated data
-        weight_array = np.zeros((self.number_periods, self.number_periods))
-        for i in range(self.number_periods):
+        number_periods = len(temp_array)
+        weight_array = np.zeros((number_periods, number_periods))
+        for i in range(number_periods):
             #Iterate through all possible release periods i and set the initial weight
             weight_array[i][i] = init_weight
-            for j in range(i, min(self.number_periods - 1, i + self.max_periods_deployed)):
+            for j in range(i, min(number_periods - 1, i + self.max_periods_deployed)):
                 #Iterate through all possible growth periods j given release period i
                 #Calculate the weight for period j+1 given the weight in period j using weight_growth() function and put into the array
                 weight = weight_array[i][j]
-                weight_array[i][j + 1] = self.weight_growth(weight, temperature=temp_array[j], TGC=self.TGC_array[j-i],duration=30)
+                weight_array[i][j + 1] = self.calculate_weight_growth(weight, temperature=temp_array[j], TGC=self.TGC_array[j - i], duration=30)
         #Read data from array into dataframe
-        weight_df = pd.DataFrame(weight_array, columns=[i for i in range(self.number_periods)], index=[i for i in range(self.number_periods)])
+        weight_df = pd.DataFrame(weight_array, columns=[i for i in range(number_periods)], index=[i for i in range(number_periods)])
         return weight_df
 
-    def calculate_growth_frame(self, weight_frame):
+    def calculate_growth_frame_from_weight_frame(self, weight_frame):
         """
         A function that calculates a growth factor for every possible relase and subsequent growth and harvest period. The growth factor indicates the growth from a period t to a period t+1
         :param weight_frame: The weight frame is a dataframe containing all possible weight developments.
         :return: growth_df  -  A dataframe with all the growth factors for every possible period
         """
+        #Getting the number of periods from the growth array
+        number_periods = weight_frame[0].size
         #Declare a growth_factor array containing all calculated growth factors
-        growth_array = np.zeros((self.number_periods, self.number_periods))
-        for i in range(self.number_periods):
+        growth_array = np.zeros((number_periods, number_periods))
+        for i in range(number_periods):
             #Iterate through all possible release periods i
-            for j in range(i, min(self.number_periods - 1, i + self.max_periods_deployed)):
+            for j in range(i, min(number_periods - 1, i + self.max_periods_deployed)):
                 # Iterate through all possible growth periods j given release period i
                 # Calculate the growth factor, using expected weight developments from the weight fram and input into array
                 growth_array[i][j] = weight_frame.iloc[i][j+1]/weight_frame.iloc[i][j]
         #Read data from array into dataframe
-        growth_df = pd.DataFrame(growth_array, columns=[i for i in range(self.number_periods)],index=[i for i in range(self.number_periods)])
+        growth_df = pd.DataFrame(growth_array, columns=[i for i in range(number_periods)],index=[i for i in range(number_periods)])
         return growth_df
 
 
