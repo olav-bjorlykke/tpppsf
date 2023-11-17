@@ -20,6 +20,7 @@ class GlobalParameters:
     number_periods = 60
     temp_growth_period = 6 #TODO: implement this stochastically
     bigM = 100000000
+    weight_req_for_harvest = 3000
 
     def __init__(self):
         pass

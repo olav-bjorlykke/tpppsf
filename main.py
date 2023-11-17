@@ -8,8 +8,6 @@ from scenarios import Scenarios
 
 input =InputData()
 
-print(input.temperatures_df)
-
 scenarios_test = Scenarios(input.temperatures_df)
 
 
@@ -18,13 +16,23 @@ site_test = Site(
     capacity=1000,
     init_biomass=100,
     TGC_array=input.TGC_df.iloc[1],
-    possible_smolt_weights=[150,200,250]
+    possible_smolt_weights=[150,200,250],
+    weight_req_for_harvest = 3000
 )
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 
-print(site_test.weight_development_per_scenario_df)
+print("GROWT SETS:", site_test.growth_sets)
+
+site_test.weight_development_per_scenario_df.index.names = ["weight", "scenario", "period"]
+
+
+
+
+
+
+#print(site_test.weight_development_per_scenario_df.index[1][0])
 
 
 
