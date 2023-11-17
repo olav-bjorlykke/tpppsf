@@ -3,7 +3,8 @@ from gurobipy import GRB
 import numpy as np
 from parameters import GlobalParameters
 from input_data import InputData
-from site_structure import Site
+from site_class import Site
+from scenarios import Scenarios
 
 """
 EXPLANATION: 
@@ -14,14 +15,18 @@ At the top it also contains the necesarry input variables from the rest of the d
 
 
 #Declaring an instance of the input data, to have access to input data
-input =InputData()
+input_data =InputData()
+parameters =GlobalParameters()
+test_scenarios = Scenarios(input_data.temperatures_df)
 
 #Declaring an instance of the site class to get site spesific information
 site = Site(
-    temperatures=np.tile(input.temperatures_df.iloc[0].to_numpy(),5),
-    TGC_array=input.TGC_df.iloc[0].astype(float).to_numpy(),
-    init_biomass=500,
-    capacity=1000,
+    scenario_temperatures = test_scenarios.scenario_temperatures_per_site_df.loc["Senja"],
+    capacity = 3000.0 * 1000,
+    init_biomass = 500 * 1000,
+    TGC_array= input_data.TGC_df.iloc[0],
+    smolt_weights = parameters.smolt_weights,
+    weight_req_for_harvest = 3000.0
 )
 
 
@@ -33,14 +38,13 @@ In this file we see an optimization model using gurobi that solves the tactical 
 
 
 #Importing parameters from the global parameters file
-parameters = GlobalParameters
+
 
 #Crating variables to contain the size of different sets
-f_size = 1 #TODO:Change to be the correct size and connected to where it is declared
-l_size = 1 #TODO: Change to be number of locations
+f_size = len(site.smolt_weights)
+l_size = 1
 t_size = parameters.number_periods
-s_size = parameters.scenario_probabilities.size
-G = 1.2 #TODO: implement on a per site and per period basis
+s_size = len(parameters.scenario_probabilities)
 
 #Creating an instance of the gurobi model object
 model = gp.Model("single site solution")
@@ -149,7 +153,7 @@ model.addConstrs( # This is constraint (5.9) - which ensures that biomass x = bi
 )
 
 model.addConstrs(#This represents the constraint (5.10) - which ensures biomass growth in the growth period
-    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*site.growth_frame.iloc[t_hat][t] #TODO:Introduce scenario and period specific G
+    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*site.growth_per_scenario_df.loc[(site.smolt_weights[f], f"Scenario {s}")][t_hat][t] #TODO:Introduce scenario and period specific G
     for t_hat in range(t_size -1)
     for f in range(f_size)
     for t in range(t_hat,min(t_hat+parameters.temp_growth_period, t_size - 1))
@@ -157,7 +161,7 @@ model.addConstrs(#This represents the constraint (5.10) - which ensures biomass 
 )
 
 model.addConstrs(#This is the constraint (5.11) - Which tracks the biomass employed in the harvest period
-    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*site.growth_frame.iloc[t_hat][t] - w[f,t_hat,t,s] #TODO:Introduce scenario and period specific G
+    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*site.growth_per_scenario_df.loc[(site.smolt_weights[f], f"Scenario {s}")][t_hat][t] - w[f,t_hat,t,s] #TODO:Introduce scenario and period specific G
     for t_hat in range(t_size -1)
     for f in range(f_size)
     for t in range(min(t_hat+parameters.temp_growth_period, t_size - 1), min(t_hat+parameters.max_periods_deployed, t_size - 1))

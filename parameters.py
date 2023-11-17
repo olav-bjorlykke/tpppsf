@@ -14,13 +14,15 @@ class GlobalParameters:
         data=[[100,10],[150,6.66],[250,4]],
         columns=["weight","num-smolt-kilo"]
     )
+    smolt_weights = [150,200,250]
     min_fallowing_periods = 2
     max_fallowing_periods = 36
     max_periods_deployed = 12
     number_periods = 60
     temp_growth_period = 6 #TODO: implement this stochastically
     bigM = 100000000
-    weight_req_for_harvest = 3000
+    weight_req_for_harvest = 3000.0
+    scenario_probabilities = [0.1,0.8,0.1]
 
     def __init__(self):
         pass

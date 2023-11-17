@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from parameters import GlobalParameters
 from input_data import InputData
-from site_structure import Site
+from site_class import Site
 from scenarios import Scenarios
 
 
