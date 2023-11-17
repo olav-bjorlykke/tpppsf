@@ -10,11 +10,12 @@ class Site:
     #Callable parameters
     harvest_sets = None  # TODO: define                             #Sets where harvest is allowed given a certain deploy period
     growth_sets = None  # TODO: define                              #Set of periods where havest is not allowed given a certain deploy period
-    number_periods = 60  # TODO: set as an input parameter          #Number of periods in the planning problem
-    max_periods_deployed = 19  # TODO: Set as an input parameter    #Max number of sets that a cohort can be deployed
+    max_periods_deployed = 19  # TODO: Get from the size of the TGC array    #Max number of sets that a cohort can be deployed
     capacity = None
     init_biomass = None
-    growth_frame_per_scenario = None
+    growth_per_scenario_df = None
+    weight_development_per_scenario_df = None
+
 
     #Parameters for calculations within this class
     TGC_array = None
@@ -29,12 +30,53 @@ class Site:
                  TGC_array,
                  possible_smolt_weights
                  ):
+        #Setting class variables
         self.TGC_array = TGC_array                                                #Array of all TGC for a possible deploy period
         self.capacity = capacity                                                  #Max capacity at a single site
         self.init_biomass = init_biomass                                          #Initial biomass at the site, i.e biomass in the first period
         self.possible_smolt_weights = possible_smolt_weights                                 #Global parameters object containing the global parameters
         self.scenario_temperatures = scenario_temperatures
-        self.growth_frame_per_scenario = self.calculate_growth_frame_for_scenarios_and_smolt_weights(possible_smolt_weights, scenario_temperatures)
+
+        #Calulating growth and weight development dataframes for all scenarios and possible smolt weights
+        self.growth_per_scenario_df = self.calculate_growth_frame_for_scenarios_and_smolt_weights(possible_smolt_weights, scenario_temperatures)
+        self.weight_development_per_scenario_df = self.calculate_weight_frame_for_scenarios_and_smolt_weights(possible_smolt_weights, scenario_temperatures)
+
+    def calculate_weight_frame_for_scenarios_and_smolt_weights(self, smolt_weights, scenarios_temperatures):
+        """
+               EXPLANATION: Calculates the weight development, for all smolt weights, for very scenario, release period and subsequent growth periods.
+
+               :param smolt_weights: An array containing all possible smolt weights for release
+               :param scenarios_temperatures: A dataframe containing temperaturs for all scenarios
+               :return: growth_frame_all_scenarios_and_weights - a 4-D dataframe with the data described in the explanation.
+               """
+
+        data_storage = []
+        for weight in smolt_weights:
+            scenario_weight_frames_given_weight = self.calculate_weight_frame_for_scenarios(weight,scenarios_temperatures)
+            data_storage.append(scenario_weight_frames_given_weight)
+
+        weight_frame_all_scenarios_and_weights = pd.concat(data_storage, keys=smolt_weights)
+        return weight_frame_all_scenarios_and_weights
+    
+    
+    def calculate_weight_frame_for_scenarios(self, smolt_weight, scenarios_temperatures):
+        """
+                EXPLANATION: Calculates the expected weight for every period, following every possible release in every scenario for a given smolt weight.
+
+                :param smolt_weight: The weight of the smolt at release
+                :param scenarios_temperatures: a dataframe containing the temperatures for all scenarios across the planning period
+                :return: growth_frame_all_scenarios - a 3-D dataframe containing the growth factor for every period, following every release and every scenario.
+                """
+
+        data_storage = []
+        for i in range(len(scenarios_temperatures.index)):
+            temp_array = scenarios_temperatures.iloc[i]
+            scenario_weight_frame = self.calculate_weight_frame(temp_array, smolt_weight)
+            data_storage.append(scenario_weight_frame)
+
+        weight_frame_all_scenarios = pd.concat(data_storage, keys=scenarios_temperatures.index)
+        return weight_frame_all_scenarios
+
 
     def calculate_growth_frame_for_scenarios_and_smolt_weights(self, smolt_weights, scenarios_temperatures):
         """
