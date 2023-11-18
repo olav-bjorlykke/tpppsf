@@ -5,6 +5,7 @@ from parameters import GlobalParameters
 from input_data import InputData
 from site_class import Site
 from scenarios import Scenarios
+import matplotlib.pyplot as plt
 
 """
 EXPLANATION: 
@@ -41,12 +42,13 @@ In this file we see an optimization model using gurobi that solves the tactical 
 f_size = 2  #
 l_size = 1
 t_size = parameters.number_periods
-s_size = 2  #len(parameters.scenario_probabilities)
+s_size = 3  #len(parameters.scenario_probabilities)
 
 #Defining a variable for the growth frame G
 G = 1.2
 growth_factors = site.growth_per_scenario_df
 smolt_weights = parameters.smolt_weights
+growth_sets = site.growth_sets
 
 #Creating an instance of the gurobi model object
 model = gp.Model("single site solution")
@@ -155,19 +157,21 @@ model.addConstrs( # This is constraint (5.9) - which ensures that biomass x = bi
 )
 
 model.addConstrs(#This represents the constraint (5.10) - which ensures biomass growth in the growth period
-    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*growth_factors.loc[(smolt_weights[0], f"Scenario {f}", t_hat)][t] #TODO:Introduce scenario and period specific G
+    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*growth_factors.loc[(smolt_weights[f], f"Scenario {s}", t_hat)][t] #TODO:Introduce scenario and period specific G
     for t_hat in range(t_size -1)
     for f in range(f_size)
-    for t in range(t_hat,min(t_hat+parameters.temp_growth_period, t_size - 1))
     for s in range(s_size)
+    for t in range(min(t_hat, t_size -1),min(growth_sets.loc[(smolt_weights[f], f"Scenario {s}")][t_hat], t_size - 1))
+
 )
 
 model.addConstrs(#This is the constraint (5.11) - Which tracks the biomass employed in the harvest period
-    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*growth_factors.loc[(smolt_weights[0], f"Scenario {f}", t_hat)][t] - w[f,t_hat,t,s] #TODO:Introduce scenario and period specific G
+    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*growth_factors.loc[(smolt_weights[f], f"Scenario {s}", t_hat)][t] - w[f,t_hat,t,s] #TODO:Introduce scenario and period specific G
     for t_hat in range(t_size -1)
     for f in range(f_size)
-    for t in range(min(t_hat+parameters.temp_growth_period, t_size - 1), min(t_hat+parameters.max_periods_deployed, t_size - 1))
     for s in range(s_size)
+    for t in range(min(growth_sets.loc[(smolt_weights[f], f"Scenario {s}")][t_hat], t_size -1), min(t_hat+parameters.max_periods_deployed, t_size -1))
+
 )
 
 model.addConstrs(#This is the constraint (5.12) - Which forces the binary employement variable to be positive if biomass is employed
@@ -199,8 +203,8 @@ model.addConstrs( #TODO:This is a forcing constraint that is not in the mathemat
     w[f,t_hat,t,s] == 0
     for f in range(f_size)
     for t_hat in range(t_size)
-    for t in range(0, min(t_hat + parameters.temp_growth_period,t_size))
     for s in range(s_size)
+    for t in range(0, min(growth_sets.loc[(smolt_weights[f], f"Scenario {s}")][t_hat],t_size))
 )
 
 model.addConstrs( #TODO:This is a second forcing constraint that is not in the mathematical model, put it in the model somehow
@@ -217,21 +221,37 @@ model.optimize()
 """
 PRINTING THE SOLUTION
 """
+data_list = []
+
 if model.status == GRB.OPTIMAL:
         print("Optimal solution found:")
         # Print values of continuous variables w
         print("Values of w:")
         for s in range(s_size):
             for f in range(f_size):
+                data_list.append([])
                 for t_hat in range(t_size):
-                    if (x[f, t_hat, t_hat, s].x) > 5:
-                        for t in range(t_hat, t_size):
-                            print(f"x[{f},{t_hat},{t},{s}] = {round(x[f, t_hat, t, s].x/1000)}", f"w[{f},{t_hat},{t},{s}] = {w[f,t_hat, t, s].x/1000}") #Divide by 1000 to get print in tonnes
+                    for t in range(t_hat, t_size):
+                        if (x[f, t_hat, t, s].x) > 5:
+                            print(f"x[{f},{t_hat},{t},{s}] = {round(x[f, t_hat, t, s].x/1000)}")#, f"w[{f},{t_hat},{t},{s}] = {w[f,t_hat, t, s].x/1000}") #Divide by 1000 to get print in tonnes
+                            data_list[s].append(x[f, t_hat, t, s].x/1000)
+
 
         for f in range(f_size):
             for t in range(t_size):
+                if (y[f, t].x) > 5:
                     print(f"y[{f},{t}] = {y[f,t].x/1000}") #Divide by 1000 to get print in tonnes
 
 else:
     print("No optimal solution found.")
 
+
+for sublist in data_list:
+    line_style = '-' if sublist[-1] == 0 else '--'
+    plt.plot(sublist[:-1], label=f'Line Type: {line_style}')
+
+plt.legend()
+plt.xlabel('Periods')
+plt.ylabel('Biomass')
+plt.title('Biomass plot')
+plt.show()

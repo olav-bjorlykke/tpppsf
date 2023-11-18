@@ -14,10 +14,10 @@ class GlobalParameters:
         data=[[100,10],[150,6.66],[250,4]],
         columns=["weight","num-smolt-kilo"]
     )
-    smolt_weights = [150,200,250]
+    smolt_weights = [150,250]
     min_fallowing_periods = 2
     max_fallowing_periods = 36
-    max_periods_deployed = 12
+    max_periods_deployed = 24
     number_periods = 60
     temp_growth_period = 6 #TODO: implement this stochastically
     bigM = 100000000
