@@ -13,15 +13,14 @@ At the top it also contains the necesarry input variables from the rest of the d
 """
 
 
-
-#Declaring an instance of the input data, to have access to input data
+#Declaring instances of the input data, parameters and scenario classes
 input_data =InputData()
 parameters =GlobalParameters()
-test_scenarios = Scenarios(input_data.temperatures_df)
+scenarios_obj = Scenarios(input_data.temperatures_df)
 
 #Declaring an instance of the site class to get site spesific information
 site = Site(
-    scenario_temperatures = test_scenarios.scenario_temperatures_per_site_df.loc["Senja"],
+    scenario_temperatures = scenarios_obj.scenario_temperatures_per_site_df.loc["Senja"],
     capacity = 3000.0 * 1000,
     init_biomass = 500 * 1000,
     TGC_array= input_data.TGC_df.iloc[0],
@@ -37,14 +36,17 @@ In this file we see an optimization model using gurobi that solves the tactical 
 """
 
 
-#Importing parameters from the global parameters file
-
 
 #Crating variables to contain the size of different sets
-f_size = len(site.smolt_weights)
+f_size = 2  #
 l_size = 1
 t_size = parameters.number_periods
-s_size = len(parameters.scenario_probabilities)
+s_size = 2  #len(parameters.scenario_probabilities)
+
+#Defining a variable for the growth frame G
+G = 1.2
+growth_factors = site.growth_per_scenario_df
+smolt_weights = parameters.smolt_weights
 
 #Creating an instance of the gurobi model object
 model = gp.Model("single site solution")
@@ -90,21 +92,21 @@ In this section we declare the constraints of the model, each constraint is labe
 
 
 #TODO: Add smolt deployment constraints
-model.addConstrs(#This is the constraint (5.4) - which restricts the deployment of smolt to an upper and lower bound, while forcing the binary deploy variable
-    gp.quicksum(parameters.smolt_type_df.iloc[f]["num-smolt-kilo"] * y[f,t] for f in range(f_size)) <= parameters.smolt_deployment_upper_bound * deploy_bin[t]
+model.addConstrs(#This is the constraint (5.4) - which restricts the deployment of smolt to an upper bound, while forcing the binary deploy variable
+    gp.quicksum(parameters.smolt_weights[f]/1000 * y[f,t] for f in range(f_size)) <= parameters.smolt_deployment_upper_bound * deploy_bin[t]    #Divide by thousand, as smolt weight is given in grams, while deployed biomass is in kilos
     for t in range(t_size)
 )
 
 
 model.addConstrs(#This is constraint (5.5) - setting a lower limit on smolt deployed from a single cohort
-    parameters.smolt_type_df.iloc[f]["num-smolt-kilo"] * y[f,t] <= parameters.smolt_deployment_upper_bound * deploy_type_bin[f,t]
+    parameters.smolt_weights[f]/1000 * y[f,t] >= parameters.smolt_deployment_lower_bound * deploy_type_bin[f,t]
     for t in range(t_size)
     for f in range(f_size)
 )
 
 
-model.addConstrs(#This is constraint (Currently no in model) - setting an upper limit on smolt deployed in a single cohort #TODO: Add to mathematical model
-    parameters.smolt_deployment_upper_bound * deploy_type_bin[f,t] <= parameters.smolt_type_df.iloc[f]["num-smolt-kilo"] * y[f,t]
+model.addConstrs(#This is constraint (Currently not in model) - setting an upper limit on smolt deployed in a single cohort #TODO: Add to mathematical model
+    parameters.smolt_deployment_upper_bound * deploy_type_bin[f,t] >= parameters.smolt_weights[f]/1000 * y[f,t]
     for t in range(t_size)
     for f in range(f_size)
 )
@@ -153,7 +155,7 @@ model.addConstrs( # This is constraint (5.9) - which ensures that biomass x = bi
 )
 
 model.addConstrs(#This represents the constraint (5.10) - which ensures biomass growth in the growth period
-    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*site.growth_per_scenario_df.loc[(site.smolt_weights[f], f"Scenario {s}")][t_hat][t] #TODO:Introduce scenario and period specific G
+    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*growth_factors.loc[(smolt_weights[0], f"Scenario {f}", t_hat)][t] #TODO:Introduce scenario and period specific G
     for t_hat in range(t_size -1)
     for f in range(f_size)
     for t in range(t_hat,min(t_hat+parameters.temp_growth_period, t_size - 1))
@@ -161,7 +163,7 @@ model.addConstrs(#This represents the constraint (5.10) - which ensures biomass 
 )
 
 model.addConstrs(#This is the constraint (5.11) - Which tracks the biomass employed in the harvest period
-    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*site.growth_per_scenario_df.loc[(site.smolt_weights[f], f"Scenario {s}")][t_hat][t] - w[f,t_hat,t,s] #TODO:Introduce scenario and period specific G
+    x[f,t_hat,t + 1,s] == (1-parameters.expected_production_loss)*x[f,t_hat, t,s]*growth_factors.loc[(smolt_weights[0], f"Scenario {f}", t_hat)][t] - w[f,t_hat,t,s] #TODO:Introduce scenario and period specific G
     for t_hat in range(t_size -1)
     for f in range(f_size)
     for t in range(min(t_hat+parameters.temp_growth_period, t_size - 1), min(t_hat+parameters.max_periods_deployed, t_size - 1))

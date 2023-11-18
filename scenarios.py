@@ -16,6 +16,7 @@ class Scenarios:
 
     #Variables to be input here:
     scenarios_variations = [0.95,1.0,1.05]
+    scenario_probabilities = [0.1, 0.8, 0.1]
     num_scenarios = len(scenarios_variations)
 
     def __init__(self, base_temperatures_df):

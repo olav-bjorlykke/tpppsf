@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 class GlobalParameters:
-    smolt_deployment_upper_bound = 3000000 #Upper bound for smolt deployed
+    smolt_deployment_upper_bound = 2400000 #Upper bound for number of smolt deployed
     smolt_deployment_lower_bound = 10000 #Lower bound of smolt deployed
     max_harvest = 2000 * 1000 #Max biomass that can be harvested in any period in tons
     min_harvest = 100 *1000 #Minimum amount of biomass that can be harvested if biomass is harvested in tons
@@ -22,7 +22,7 @@ class GlobalParameters:
     temp_growth_period = 6 #TODO: implement this stochastically
     bigM = 100000000
     weight_req_for_harvest = 3000.0
-    scenario_probabilities = [0.1,0.8,0.1]
+    scenario_probabilities = [0.1, 0.8, 0.1]
 
     def __init__(self):
         pass

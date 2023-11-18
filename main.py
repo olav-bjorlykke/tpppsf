@@ -10,8 +10,6 @@ input =InputData()
 
 scenarios_test = Scenarios(input.temperatures_df)
 
-print(input.TGC_df)
-
 
 site_test = Site(
     scenario_temperatures=scenarios_test.scenario_temperatures_per_site_df.loc["Senja"],
@@ -21,6 +19,9 @@ site_test = Site(
     smolt_weights=[150, 200, 250],
     weight_req_for_harvest = 3000.0
 )
+
+growth_factor_df = site_test.growth_per_scenario_df.loc[(site_test.smolt_weights[0], f"Scenario 0", 1)][1]
+print(growth_factor_df)
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
