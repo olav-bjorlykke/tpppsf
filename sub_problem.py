@@ -39,7 +39,7 @@ In this file we see an optimization model using gurobi that solves the tactical 
 
 
 #Crating variables to contain the size of different sets
-f_size = 2  #
+f_size = 1  #
 l_size = 1
 t_size = parameters.number_periods
 s_size = 3  #len(parameters.scenario_probabilities)
@@ -51,7 +51,7 @@ smolt_weights = parameters.smolt_weights
 growth_sets = site.growth_sets
 
 #Creating an instance of the gurobi model object
-model = gp.Model("single site solution")
+model = gp.Model("Single site solution")
 
 """
 DECLARING VARIABLES
@@ -228,8 +228,8 @@ if model.status == GRB.OPTIMAL:
         # Print values of continuous variables w
         print("Values of w:")
         for s in range(s_size):
+            data_list.append([])
             for f in range(f_size):
-                data_list.append([])
                 for t_hat in range(t_size):
                     for t in range(t_hat, t_size):
                         if (x[f, t_hat, t, s].x) > 5:

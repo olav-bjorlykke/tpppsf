@@ -14,7 +14,7 @@ class Site:
     init_biomass = None                                     #Biomass at the site at the start of the planning period
     growth_per_scenario_df = None                           #A dataframe containing the growth factor for every period, scenario, smolt weight, deploy period combination
     weight_dev_per_scenario_df = None                       #A dataframe containing the weight development for every period, scenario, smolt weight, deploy period combination
-
+    name = None
 
     #Parameters for calculations within this class
     TGC_array = None                                        #An array containing the growth coefficients for a given smolt type
@@ -28,7 +28,8 @@ class Site:
                  init_biomass,
                  TGC_array,
                  smolt_weights,
-                 weight_req_for_harvest
+                 weight_req_for_harvest,
+                 site_name = "Not Set"
                  ):
         #Setting class variables
         self.TGC_array = TGC_array                                                #Array of all TGC for a possible deploy period
@@ -37,6 +38,7 @@ class Site:
         self.smolt_weights = smolt_weights                                        #Array of possible smolt weights
         self.scenario_temps = scenario_temperatures                               #Array of scenario temperatures for the site
         self.max_periods_deployed = len(TGC_array)
+        self.name = site_name
 
         #Calulating growth and weight development dataframes for all scenarios and possible smolt weights
         self.growth_per_scenario_df = self.calculate_growth_df_for_scenarios_and_smolt_weights(smolt_weights, scenario_temperatures)
