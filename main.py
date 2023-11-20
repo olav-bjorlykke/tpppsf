@@ -32,7 +32,7 @@ sub_problem_test.solve_and_print_model()
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 
-print(sub_problem_test.get_deploy_period_list_per_cohort())
+print(sub_problem_test.get_deploy_amounts_df(sub_problem_test.get_deploy_period_list()))
 
 
 """

@@ -286,16 +286,23 @@ class SubProblem:
         return df
 
 
-    def get_deploy_amounts_df(self, deploy_periods_list_per_cohort):
+    def get_deploy_amounts_df(self, deploy_periods_list):
         data_storage = []
-        
+        for f in range(self.f_size):
+            deploy_amounts_f = [self.y[f,t].x for t in deploy_periods_list]
+            data_storage.append(deploy_amounts_f)
+
+        df = pd.DataFrame(data_storage, index=[f"Smolt type {f}" for f in range(self.f_size)], columns=deploy_periods_list)
+        return df
+
+
 
 
     def get_second_stage_variables_df(self, deploy_period_list):
         """
         This is the for loop from hell. 
         It iterates through all non-zero variables and writes the variables for X, W, Employ_bin and Harvest_bin to a ginormous dataframe
-        Please dont touch it
+        Please don't touch it
         """
         df_storage = []
         for s in range(self.s_size):
