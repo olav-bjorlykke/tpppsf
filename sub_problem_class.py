@@ -26,7 +26,7 @@ class SubProblem:
         #Setting variables to contain the size of sets
         self.f_size = 1  #TODO: declare using the smolt set
         self.t_size = self.parameters.number_periods
-        self.s_size = 3  #TODO: len(parameters.scenario_probabilities)
+        self.s_size = 2  #TODO: len(parameters.scenario_probabilities)
 
         #Defining some variables from the data objects for easier reference
         self.growth_factors = self.site.growth_per_scenario_df
@@ -87,6 +87,14 @@ class SubProblem:
             # This is the constraint (5.4) - which restricts the deployment of smolt to an upper bound, while forcing the binary deploy variable
             gp.quicksum(self.parameters.smolt_weights[f] / 1000 * self.y[f, t] for f in
                         range(self.f_size)) <= self.parameters.smolt_deployment_upper_bound * self.deploy_bin[t]
+            # Divide by thousand, as smolt weight is given in grams, while deployed biomass is in kilos
+            for t in range(self.t_size)
+        )
+
+        self.model.addConstrs(
+            # This is the constraint (5.4) - which restricts the deployment of smolt to a lower bound bound, while forcing the binary deploy variable
+            gp.quicksum(self.parameters.smolt_weights[f] / 1000 * self.y[f, t] for f in
+                        range(self.f_size)) >= self.parameters.smolt_deployment_lower_bound * self.deploy_bin[t]
             # Divide by thousand, as smolt weight is given in grams, while deployed biomass is in kilos
             for t in range(self.t_size)
         )
@@ -223,6 +231,9 @@ class SubProblem:
         data_list = []
 
         if self.model.status == GRB.OPTIMAL:
+
+
+            """
             print("Optimal solution found:")
             # Print values of continuous variables w
             print("Values of w:")
@@ -233,13 +244,18 @@ class SubProblem:
                         for t in range(t_hat, self.t_size):
                             if (self.x[f, t_hat, t, s].x) > 5:
                                 print(
-                                    f"x[{f},{t_hat},{t},{s}] = {round(self.x[f, t_hat, t, s].x / 1000)}")  # , f"w[{f},{t_hat},{t},{s}] = {w[f,t_hat, t, s].x/1000}") #Divide by 1000 to get print in tonnes
+                                    f"x[{f},{t_hat},{t},{s}] = {round(self.x[f, t_hat, t, s].x / 1000)}",
+                                    f"employ_bin[{f},{t_hat},{t},{s}] = {round(self.employ_bin[t, s].x)}",
+                                    "\n"
+                                    f"w[{f},{t_hat},{t},{s}] = {round(self.w[f, t_hat, t, s].x / 1000)}",
+                                    f"harvest_bin[{f},{t_hat},{t},{s}] = {round(self.harvest_bin[t, s].x)}"
+                                )  # , f"w[{f},{t_hat},{t},{s}] = {w[f,t_hat, t, s].x/1000}") #Divide by 1000 to get print in tonnes
                                 data_list[s].append(self.x[f, t_hat, t, s].x / 1000)
-
+            """
             for f in range(self.f_size):
                 for t in range(self.t_size):
-                    if (self.y[f, t].x) > 5:
-                        print(f"y[{f},{t}] = {self.y[f, t].x / 1000}")  # Divide by 1000 to get print in tonnes
+                    #if (self.y[f, t].x) > 5:
+                        print(f"y[{f},{t}] = {self.y[f, t].x / 1000}", f"deploy type bin[{f},{t}] = {self.deploy_type_bin[f, t].x}", f"deploy bin[{f},{t}] = {self.deploy_bin[t].x }")  # Divide by 1000 to get print in tonnes
 
         else:
             print("No optimal solution found.")
@@ -254,7 +270,21 @@ class SubProblem:
         plt.title('Biomass plot')
         plt.show()
 
+    def write_solution_to_df(self):
+        #Creating deploy_bin list
+        deploy_bin_list = [i for i in range(0, self.t_size) if self.deploy_bin[i].x == 1]
+        print(deploy_bin_list)
 
+        #Creating deploy_var = y list
+
+        #Iterating over the release periods in the deploy_bin list
+        #Adding biomass tracking variables - x
+        #Adding harvest variables
+        #Adding binary variables
+
+
+
+        pass
 
 
 

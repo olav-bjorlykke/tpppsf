@@ -28,6 +28,7 @@ sub_problem_test = SubProblem(
 )
 
 sub_problem_test.solve_and_print_model()
+sub_problem_test.write_solution_to_df()
 
 
 """
