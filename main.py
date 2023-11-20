@@ -28,7 +28,11 @@ sub_problem_test = SubProblem(
 )
 
 sub_problem_test.solve_and_print_model()
-sub_problem_test.write_solution_to_df()
+
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+
+print(sub_problem_test.get_deploy_period_list_per_cohort())
 
 
 """

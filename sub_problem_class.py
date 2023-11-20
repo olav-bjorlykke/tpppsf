@@ -1,4 +1,5 @@
 import gurobipy as gp
+import pandas as pd
 from gurobipy import GRB
 import numpy as np
 from parameters import GlobalParameters
@@ -24,9 +25,9 @@ class SubProblem:
         self.model = gp.Model(f"Single site solution {self.site.name}")
 
         #Setting variables to contain the size of sets
-        self.f_size = 1  #TODO: declare using the smolt set
+        self.f_size = 2  #TODO: declare using the smolt set
         self.t_size = self.parameters.number_periods
-        self.s_size = 2  #TODO: len(parameters.scenario_probabilities)
+        self.s_size = 1  #TODO: len(parameters.scenario_probabilities)
 
         #Defining some variables from the data objects for easier reference
         self.growth_factors = self.site.growth_per_scenario_df
@@ -233,7 +234,7 @@ class SubProblem:
         if self.model.status == GRB.OPTIMAL:
 
 
-            """
+
             print("Optimal solution found:")
             # Print values of continuous variables w
             print("Values of w:")
@@ -251,7 +252,8 @@ class SubProblem:
                                     f"harvest_bin[{f},{t_hat},{t},{s}] = {round(self.harvest_bin[t, s].x)}"
                                 )  # , f"w[{f},{t_hat},{t},{s}] = {w[f,t_hat, t, s].x/1000}") #Divide by 1000 to get print in tonnes
                                 data_list[s].append(self.x[f, t_hat, t, s].x / 1000)
-            """
+
+
             for f in range(self.f_size):
                 for t in range(self.t_size):
                     #if (self.y[f, t].x) > 5:
@@ -270,21 +272,54 @@ class SubProblem:
         plt.title('Biomass plot')
         plt.show()
 
-    def write_solution_to_df(self):
-        #Creating deploy_bin list
-        deploy_bin_list = [i for i in range(0, self.t_size) if self.deploy_bin[i].x == 1]
-        print(deploy_bin_list)
+    def get_deploy_period_list(self):
+        deploy_period_list = [i for i in range(0, self.t_size) if self.deploy_bin[i].x == 1]
+        return deploy_period_list
 
-        #Creating deploy_var = y list
+    def get_deploy_period_list_per_cohort(self):
+        data_storage =[]
+        for f in range(self.f_size):
+            deploy_period_list_f = [t for t in range(0, self.t_size) if self.deploy_type_bin[f,t].x == 1]
+            data_storage.append(deploy_period_list_f)
 
-        #Iterating over the release periods in the deploy_bin list
-        #Adding biomass tracking variables - x
-        #Adding harvest variables
-        #Adding binary variables
+        df = pd.DataFrame(data_storage, index=[f"Smolt type {f}" for f in range(self.f_size)])
+        return df
 
 
+    def get_deploy_amounts_df(self, deploy_periods_list_per_cohort):
+        data_storage = []
+        
 
-        pass
 
+    def get_second_stage_variables_df(self, deploy_period_list):
+        """
+        This is the for loop from hell. 
+        It iterates through all non-zero variables and writes the variables for X, W, Employ_bin and Harvest_bin to a ginormous dataframe
+        Please dont touch it
+        """
+        df_storage = []
+        for s in range(self.s_size):
+            l1_df_storage = []
+            for f in range(self.f_size):
+                l2_df_storage = []
+                for deploy_period in deploy_period_list:
+                    l3_data_storage = []
+                    for t in range(deploy_period, min(deploy_period + self.parameters.max_periods_deployed, self.t_size)):
+                        x_entry = self.x[f, deploy_period, t, s].x
+                        w_entry = self.w[f, deploy_period, t, s].x
+                        employ_entry = self.employ_bin[t,s].x
+                        harvest_entry = self.harvest_bin[t,s].x
+                        l3_data_storage.append([x_entry,w_entry,employ_entry, harvest_entry])
+                    columns = ["X", "W", "EB", "HB"]
+                    index = [f"Period {i + deploy_period}" for i in range(len(l3_data_storage))]
+                    l2_df_storage.append(pd.DataFrame(l3_data_storage, columns=columns, index=index))
+                keys_l2 = [f"Deploy period {i}" for i in deploy_period_list]
+                l1_df_storage.append(pd.concat(l2_df_storage, keys=keys_l2))
+            keys_l1 = [f"Smolt Type {i}" for i in range(len(l1_df_storage))]
+            df_storage.append(pd.concat(l1_df_storage, keys=keys_l1))
+        keys = [f"Scenario {i}" for i in range(len(df_storage))]
+        df = pd.concat(df_storage, keys=keys)
+
+        return df
 
 
