@@ -83,8 +83,13 @@ print(new_df.index, new_df.index.names)
 
 master_poblem_test = MasterProblem(
     parameters=GlobalParameters(),
-    scenarios=scenarios_test
+    scenarios=scenarios_test,
+    initial_column=new_df
 )
+
+
+
+
 
 master_poblem_test.add_first_column(new_df)
 master_poblem_test.add_new_column_to_columns(new_df)

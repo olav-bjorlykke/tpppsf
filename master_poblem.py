@@ -6,7 +6,7 @@ import pandas as pd
 class MasterProblem:
     iterations_counter_k = 0
     num_locations = 3
-
+    columns = "Something"
 
     #Sets =
     iterations_k = None
@@ -14,13 +14,16 @@ class MasterProblem:
     scenarios_s = None
     smolt_types_f = None
 
+
     def __init__(self,
                  parameters,
-                 scenarios
+                 scenarios,
+                 initial_column
                  ):
         self.model = gp.Model("Master Problem")
         self.parameters = parameters
         self.scenarios = scenarios
+        self.columns = self.add_first_column(initial_column)
 
         #Declaring set sizes:
 
@@ -33,10 +36,16 @@ class MasterProblem:
         self.columns.index.names = ["Iteration", "Location", "Scenario", "Smolt type", "Deploy Period", "Period"]
         self.iterations_counter_k += 1
 
+        self.set_sets()
+
     def add_first_column(self, column):
-        self.columns = pd.concat([column], keys=[f"Iteration {self.iterations_counter_k}"])
-        self.columns.index.names = ["Iteration","Location", "Scenario", "Smolt type", "Deploy Period", "Period"]
+        columns = pd.concat([column], keys=[f"Iteration {self.iterations_counter_k}"])
+        columns.index.names = ["Iteration","Location", "Scenario", "Smolt type", "Deploy Period", "Period"]
         self.iterations_counter_k += 1
+
+        self.set_sets()
+
+        return columns
 
     def set_sets(self):
         self.iterations_k = self.columns.index.get_level_values('Iteration').unique()
@@ -69,20 +78,6 @@ class MasterProblem:
         )
 
 
-    def add_MAB_constraints_new(self):
-        #TODO: This is not working at all, fix!
-        for k in range(len(self.iterations_k)):
-            for scenario in self.scenarios_s:
-                    growth_period_list = self.columns.loc[(self.iterations_k[k])].index.get_level_values("Period").unique()
-                    for period in growth_period_list:
-                        self.model.addConstrs(
-                            gp.quicksum(
-                                    self.columns.loc[(self.iterations_k[k],self.locations_l[l], scenario)][(self.columns.loc[(self.iterations_k[k], self.locations_l[l], scenario)]["Period"] == period)]["X"].sum() * self.lambda_var[l, k]
-                                for l in range(len(self.locations_l))
-                            )
-                        )
-
-
     def add_convexity_constraint(self):
         self.model.addConstr(
             gp.quicksum(
@@ -100,24 +95,6 @@ class MasterProblem:
         print("Optimal solution found:")
         for lambda_var in self.model.getVars():
             print(lambda_var.x)
-
-    def add_MAB_constraints(self):
-        """
-        self.model.addConstrs(
-            gp.quicksum(
-                self.columns.loc[
-                    (self.iterations_k[k], self.locations_l[l], self.scenarios_s[s], self.smolt_types_f[f], t_hat, f"Period {t}")][ "X"]
-            for k in range(len(self.iterations_k))
-            for l in range(len(self.locations_l))
-            for f in range(len(self.smolt_types_f))
-            for t_hat in self.columns.loc[(self.iterations_k[k], self.locations_l[l], self.scenarios_s[s],self.smolt_types_f[f])].index.get_level_values.unique()
-            )
-
-        for s in range(len(self.scenarios_s))
-        )
-        """
-        #TODO: define this function
-        pass
 
 
     def add_convex_weighting_constraint(self):
