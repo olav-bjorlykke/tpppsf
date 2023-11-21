@@ -25,9 +25,9 @@ class SubProblem:
         self.model = gp.Model(f"Single site solution {self.site.name}")
 
         #Setting variables to contain the size of sets
-        self.f_size = 2  #TODO: declare using the smolt set
+        self.f_size = 1  #TODO: declare using the smolt set
         self.t_size = self.parameters.number_periods
-        self.s_size = 1  #TODO: len(parameters.scenario_probabilities)
+        self.s_size = 2  #TODO: len(parameters.scenario_probabilities)
 
         #Defining some variables from the data objects for easier reference
         self.growth_factors = self.site.growth_per_scenario_df
@@ -206,7 +206,7 @@ class SubProblem:
             for s in range(self.s_size)
         )
 
-    def add_initial_condition_constraint(self):
+    def add_initial_condition_constraint(self):#TODO: Add initial constraints
         pass
 
     def add_forcing_constraints(self):
@@ -285,7 +285,6 @@ class SubProblem:
         df = pd.DataFrame(data_storage, index=[f"Smolt type {f}" for f in range(self.f_size)])
         return df
 
-
     def get_deploy_amounts_df(self, deploy_periods_list):
         data_storage = []
         for f in range(self.f_size):
@@ -294,9 +293,6 @@ class SubProblem:
 
         df = pd.DataFrame(data_storage, index=[f"Smolt type {f}" for f in range(self.f_size)], columns=deploy_periods_list)
         return df
-
-
-
 
     def get_second_stage_variables_df(self, deploy_period_list):
         """
