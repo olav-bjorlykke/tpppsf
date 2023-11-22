@@ -73,55 +73,31 @@ df_3 = sub_problem_test_3.get_second_stage_variables_df(sub_problem_test_3.get_d
 
 
 
-df = pd.concat([df_1,df_2], keys=["Nord-troms", "Senja"])
-new_df_3 = pd.concat([df_3], keys=["Vesteralen"])
-
-new_df = pd.concat([df,new_df_3])
-new_df.index.names = ["Location", "Scenario", "Smolt type", "Deploy Period", "Period"]
-print(new_df.index, new_df.index.names)
+df = pd.concat([df_1,df_2, df_3], keys=[i for i in range(len([df_1,df_2, df_3]))])
 
 
 master_poblem_test = MasterProblem(
     parameters=GlobalParameters(),
     scenarios=scenarios_test,
-    initial_column=new_df
+    initial_column=df
 )
-
-
-
-
-
-master_poblem_test.add_first_column(new_df)
-master_poblem_test.add_new_column_to_columns(new_df)
-
-master_poblem_test.set_sets()
-master_poblem_test.declare_variables()
-master_poblem_test.set_objective()
-#master_poblem_test.add_MAB_constraints_new()
-master_poblem_test.add_convexity_constraint()
-master_poblem_test.print_solution()
-
-master_poblem_test.solve_model()
-
-
-print(master_poblem_test.columns.loc["Iteration 0","Nord-troms", "Scenario 0", "Smolt Type 0"].index.get_level_values("Deploy Period").unique())
+master_poblem_test.add_new_column_to_columns(df)
 
 master_poblem_test.columns.to_excel("master_problem.xlsx", index=True)
 
 
-# Write the DataFrame to an Excel file
+master_poblem_test.set_sets()
 
+print(
+    "k" , master_poblem_test.iterations_k,
+    "l" , master_poblem_test.locations_l,
+    "f", master_poblem_test.smolt_types_f,
+    "s", master_poblem_test.scenarios_s
+)
 
+master_poblem_test.run_and_solve_master_problem()
 
-
-
-
-
-#print(site_test.weight_development_per_scenario_df.index[1][0])
-
-
-
-
+master_poblem_test.get_reduced_costs_df()
 
 
 

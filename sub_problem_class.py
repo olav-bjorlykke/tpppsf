@@ -314,13 +314,13 @@ class SubProblem:
                         harvest_entry = self.harvest_bin[t,s].x
                         l3_data_storage.append([x_entry,w_entry,employ_entry, harvest_entry])
                     columns = ["X", "W", "EB", "HB"]
-                    index = [f"Period {i + deploy_period}" for i in range(len(l3_data_storage))]
+                    index = [i + deploy_period for i in range(len(l3_data_storage))]
                     l2_df_storage.append(pd.DataFrame(l3_data_storage, columns=columns, index=index))
-                keys_l2 = [f"Deploy period {i}" for i in deploy_period_list]
+                keys_l2 = [i for i in deploy_period_list]
                 l1_df_storage.append(pd.concat(l2_df_storage, keys=keys_l2))
-            keys_l1 = [f"Smolt Type {i}" for i in range(len(l1_df_storage))]
+            keys_l1 = [i for i in range(len(l1_df_storage))]
             df_storage.append(pd.concat(l1_df_storage, keys=keys_l1))
-        keys = [f"Scenario {i}" for i in range(len(df_storage))]
+        keys = [i for i in range(len(df_storage))]
         df = pd.concat(df_storage, keys=keys)
 
         return df
