@@ -10,6 +10,7 @@ from master_poblem import MasterProblem
 
 input_test =InputData()
 scenarios_test = Scenarios(input_test.temperatures_df)
+
 site_test_1 = Site(
     scenario_temperatures=scenarios_test.scenario_temperatures_per_site_df.loc["Senja"],
     capacity=1000,
@@ -71,8 +72,6 @@ df_1 = sub_problem_test_1.get_second_stage_variables_df(sub_problem_test_1.get_d
 df_2 = sub_problem_test_2.get_second_stage_variables_df(sub_problem_test_2.get_deploy_period_list())
 df_3 = sub_problem_test_3.get_second_stage_variables_df(sub_problem_test_3.get_deploy_period_list())
 
-
-
 df = pd.concat([df_1,df_2, df_3], keys=[i for i in range(len([df_1,df_2, df_3]))])
 
 
@@ -83,17 +82,8 @@ master_poblem_test = MasterProblem(
 )
 master_poblem_test.add_new_column_to_columns(df)
 
-master_poblem_test.columns.to_excel("master_problem.xlsx", index=True)
+master_poblem_test.columns.to_excel("./results/master_problem.xlsx", index=True)
 
-
-master_poblem_test.set_sets()
-
-print(
-    "k" , master_poblem_test.iterations_k,
-    "l" , master_poblem_test.locations_l,
-    "f", master_poblem_test.smolt_types_f,
-    "s", master_poblem_test.scenarios_s
-)
 
 master_poblem_test.run_and_solve_master_problem()
 
