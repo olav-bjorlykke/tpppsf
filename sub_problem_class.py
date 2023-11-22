@@ -1,4 +1,5 @@
 import gurobipy as gp
+import pandas as pd
 from gurobipy import GRB
 import numpy as np
 from parameters import GlobalParameters
@@ -26,7 +27,7 @@ class SubProblem:
         #Setting variables to contain the size of sets
         self.f_size = 1  #TODO: declare using the smolt set
         self.t_size = self.parameters.number_periods
-        self.s_size = 3  #TODO: len(parameters.scenario_probabilities)
+        self.s_size = 2  #TODO: len(parameters.scenario_probabilities)
 
         #Defining some variables from the data objects for easier reference
         self.growth_factors = self.site.growth_per_scenario_df
@@ -87,6 +88,14 @@ class SubProblem:
             # This is the constraint (5.4) - which restricts the deployment of smolt to an upper bound, while forcing the binary deploy variable
             gp.quicksum(self.parameters.smolt_weights[f] / 1000 * self.y[f, t] for f in
                         range(self.f_size)) <= self.parameters.smolt_deployment_upper_bound * self.deploy_bin[t]
+            # Divide by thousand, as smolt weight is given in grams, while deployed biomass is in kilos
+            for t in range(self.t_size)
+        )
+
+        self.model.addConstrs(
+            # This is the constraint (5.4) - which restricts the deployment of smolt to a lower bound bound, while forcing the binary deploy variable
+            gp.quicksum(self.parameters.smolt_weights[f] / 1000 * self.y[f, t] for f in
+                        range(self.f_size)) >= self.parameters.smolt_deployment_lower_bound * self.deploy_bin[t]
             # Divide by thousand, as smolt weight is given in grams, while deployed biomass is in kilos
             for t in range(self.t_size)
         )
@@ -197,7 +206,7 @@ class SubProblem:
             for s in range(self.s_size)
         )
 
-    def add_initial_condition_constraint(self):
+    def add_initial_condition_constraint(self):#TODO: Add initial constraints
         pass
 
     def add_forcing_constraints(self):
@@ -223,6 +232,9 @@ class SubProblem:
         data_list = []
 
         if self.model.status == GRB.OPTIMAL:
+
+
+
             print("Optimal solution found:")
             # Print values of continuous variables w
             print("Values of w:")
@@ -233,13 +245,19 @@ class SubProblem:
                         for t in range(t_hat, self.t_size):
                             if (self.x[f, t_hat, t, s].x) > 5:
                                 print(
-                                    f"x[{f},{t_hat},{t},{s}] = {round(self.x[f, t_hat, t, s].x / 1000)}")  # , f"w[{f},{t_hat},{t},{s}] = {w[f,t_hat, t, s].x/1000}") #Divide by 1000 to get print in tonnes
+                                    f"x[{f},{t_hat},{t},{s}] = {round(self.x[f, t_hat, t, s].x / 1000)}",
+                                    f"employ_bin[{f},{t_hat},{t},{s}] = {round(self.employ_bin[t, s].x)}",
+                                    "\n"
+                                    f"w[{f},{t_hat},{t},{s}] = {round(self.w[f, t_hat, t, s].x / 1000)}",
+                                    f"harvest_bin[{f},{t_hat},{t},{s}] = {round(self.harvest_bin[t, s].x)}"
+                                )  # , f"w[{f},{t_hat},{t},{s}] = {w[f,t_hat, t, s].x/1000}") #Divide by 1000 to get print in tonnes
                                 data_list[s].append(self.x[f, t_hat, t, s].x / 1000)
+
 
             for f in range(self.f_size):
                 for t in range(self.t_size):
-                    if (self.y[f, t].x) > 5:
-                        print(f"y[{f},{t}] = {self.y[f, t].x / 1000}")  # Divide by 1000 to get print in tonnes
+                    #if (self.y[f, t].x) > 5:
+                        print(f"y[{f},{t}] = {self.y[f, t].x / 1000}", f"deploy type bin[{f},{t}] = {self.deploy_type_bin[f, t].x}", f"deploy bin[{f},{t}] = {self.deploy_bin[t].x }")  # Divide by 1000 to get print in tonnes
 
         else:
             print("No optimal solution found.")
@@ -254,7 +272,57 @@ class SubProblem:
         plt.title('Biomass plot')
         plt.show()
 
+    def get_deploy_period_list(self):
+        deploy_period_list = [i for i in range(0, self.t_size) if self.deploy_bin[i].x == 1]
+        return deploy_period_list
 
+    def get_deploy_period_list_per_cohort(self):
+        data_storage =[]
+        for f in range(self.f_size):
+            deploy_period_list_f = [t for t in range(0, self.t_size) if self.deploy_type_bin[f,t].x == 1]
+            data_storage.append(deploy_period_list_f)
 
+        df = pd.DataFrame(data_storage, index=[f"Smolt type {f}" for f in range(self.f_size)])
+        return df
+
+    def get_deploy_amounts_df(self, deploy_periods_list):
+        data_storage = []
+        for f in range(self.f_size):
+            deploy_amounts_f = [self.y[f,t].x for t in deploy_periods_list]
+            data_storage.append(deploy_amounts_f)
+
+        df = pd.DataFrame(data_storage, index=[f"Smolt type {f}" for f in range(self.f_size)], columns=deploy_periods_list)
+        return df
+
+    def get_second_stage_variables_df(self, deploy_period_list):
+        """
+        This is the for loop from hell. 
+        It iterates through all non-zero variables and writes the variables for X, W, Employ_bin and Harvest_bin to a ginormous dataframe
+        Please don't touch it
+        """
+        df_storage = []
+        for s in range(self.s_size):
+            l1_df_storage = []
+            for f in range(self.f_size):
+                l2_df_storage = []
+                for deploy_period in deploy_period_list:
+                    l3_data_storage = []
+                    for t in range(deploy_period, min(deploy_period + self.parameters.max_periods_deployed, self.t_size)):
+                        x_entry = self.x[f, deploy_period, t, s].x
+                        w_entry = self.w[f, deploy_period, t, s].x
+                        employ_entry = self.employ_bin[t,s].x
+                        harvest_entry = self.harvest_bin[t,s].x
+                        l3_data_storage.append([x_entry,w_entry,employ_entry, harvest_entry])
+                    columns = ["X", "W", "EB", "HB"]
+                    index = [i + deploy_period for i in range(len(l3_data_storage))]
+                    l2_df_storage.append(pd.DataFrame(l3_data_storage, columns=columns, index=index))
+                keys_l2 = [i for i in deploy_period_list]
+                l1_df_storage.append(pd.concat(l2_df_storage, keys=keys_l2))
+            keys_l1 = [i for i in range(len(l1_df_storage))]
+            df_storage.append(pd.concat(l1_df_storage, keys=keys_l1))
+        keys = [i for i in range(len(df_storage))]
+        df = pd.concat(df_storage, keys=keys)
+
+        return df
 
 
