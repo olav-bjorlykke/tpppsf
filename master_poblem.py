@@ -97,7 +97,7 @@ class MasterProblem:
                         for l in self.locations_l
                         for k in self.iterations_k
                     )
-                    <= 2800*1000*3 #TODO: set a prober limit
+                    <= 5000*1000*3 #TODO: set a prober limit
 
                     , name=f"MAB constraint[{s},{t}]"
                 )

@@ -10,7 +10,7 @@ class Site:
     #Callable parameters
     growth_sets = None                                      #A datafrane containing the set of periods where harvest is not allowed, following release for all scenarios and smolt weights
     max_periods_deployed = None                             #Max number of periods a cohort can be deployed
-    capacity = None                                         #Max biomass capacity at the site
+    MAB_capacity = None                                     #Max biomass capacity at the site
     init_biomass = None                                     #Biomass at the site at the start of the planning period
     growth_per_scenario_df = None                           #A dataframe containing the growth factor for every period, scenario, smolt weight, deploy period combination
     weight_dev_per_scenario_df = None                       #A dataframe containing the weight development for every period, scenario, smolt weight, deploy period combination
@@ -24,7 +24,7 @@ class Site:
 
     def __init__(self,
                  scenario_temperatures,
-                 capacity,
+                 MAB_capacity,
                  init_biomass,
                  TGC_array,
                  smolt_weights,
@@ -33,12 +33,12 @@ class Site:
                  ):
         #Setting class variables
         self.TGC_array = TGC_array                                                #Array of all TGC for a possible deploy period
-        self.capacity = capacity                                                  #Max capacity at a single site
+        self.MAB_capacity = MAB_capacity                                          #Max biomass capacity at a single site
         self.init_biomass = init_biomass                                          #Initial biomass at the site, i.e biomass in the first period
         self.smolt_weights = smolt_weights                                        #Array of possible smolt weights
         self.scenario_temps = scenario_temperatures                               #Array of scenario temperatures for the site
-        self.max_periods_deployed = len(TGC_array)
-        self.name = site_name
+        self.max_periods_deployed = len(TGC_array)                                #The maximum number of periods a cohort can be deployed
+        self.name = site_name                                                     #The name of the site
 
         #Calulating growth and weight development dataframes for all scenarios and possible smolt weights
         self.growth_per_scenario_df = self.calculate_growth_df_for_scenarios_and_smolt_weights(smolt_weights, scenario_temperatures)

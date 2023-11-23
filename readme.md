@@ -10,7 +10,7 @@ You will also need a gurobi license installed to your system.
 | File                   | Description                                                                                                                           |
 |------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
 | `input_data.py`        | Contains a class that reads in the data from the txt files in data and stores it in more useful pandas dataframes                     |
-| `main.py`              | The main file, from where the other classes is orchestrated and the top level logic flow happens                                      |
+| `main.py`              | The main file, from where the other classes is orchestrated and the top level logic flow happens, currently used for testing          |
 | `master_problem.py`    | Contains the MasterProblem class, which instiantiates and solves an instance of the master problem                                    |
 | `parameters.py`        | Contains a class, where we set all parameters that are global and not read from the data files                                        |
 | `scenarios.py`         | Contains a class that takes temperatures as input and creates scenarios. The place to manage all data that is scenario specific       |

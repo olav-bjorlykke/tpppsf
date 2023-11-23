@@ -25,14 +25,15 @@ class SubProblem:
         self.model = gp.Model(f"Single site solution {self.site.name}")
 
         #Setting variables to contain the size of sets
-        self.f_size = 1  #TODO: declare using the smolt set
+        self.f_size = 2  #TODO: declare using the smolt set
         self.t_size = self.parameters.number_periods
-        self.s_size = 2  #TODO: len(parameters.scenario_probabilities)
+        self.s_size = 5  #TODO: len(parameters.scenario_probabilities)
 
         #Defining some variables from the data objects for easier reference
         self.growth_factors = self.site.growth_per_scenario_df
         self.smolt_weights = self.parameters.smolt_weights
         self.growth_sets = self.site.growth_sets
+        self.site = site_obj
 
     def solve_and_print_model(self):
         #Declaing variables
@@ -55,7 +56,13 @@ class SubProblem:
         self.model.optimize()
 
         #Printing solution
-        self.print_solution()
+        self.print_solution_to_excel()
+        self.plot_solutions_x_values()
+
+        #Putting solution into variables for export
+
+
+
 
     def declare_variables(self):
         self.x = self.model.addVars(self.f_size, self.t_size, self.t_size, self.s_size, vtype=GRB.CONTINUOUS, lb=0)
@@ -200,13 +207,13 @@ class SubProblem:
 
     def add_MAB_requirement_constraint(self):
         self.model.addConstrs(
-            gp.quicksum(self.x[f, t_hat, t, s] for f in range(self.f_size)) <= self.parameters.MAB_site_limit
+            gp.quicksum(self.x[f, t_hat, t, s] for f in range(self.f_size)) <= self.site.MAB_capacity
             for t_hat in range(self.t_size)
             for t in range(t_hat, min(t_hat + self.parameters.max_periods_deployed, self.t_size))
             for s in range(self.s_size)
         )
 
-    def add_initial_condition_constraint(self):#TODO: Add initial constraints
+    def add_initial_condition_constraint(self): #TODO: Add initial constraints
         pass
 
     def add_forcing_constraints(self):
@@ -228,49 +235,54 @@ class SubProblem:
             for s in range(self.s_size)
         )
 
-    def print_solution(self):
+    def print_solution_to_excel(self):
         data_list = []
 
         if self.model.status == GRB.OPTIMAL:
+            self.get_second_stage_variables_df().to_excel(f"./results/sub_problem{self.site.name}.xlsx", index=True)
 
+    def plot_solutions_x_values(self):
+        """
+        EXPLANATION: This function plots the x values, i.e the biomass at the location for every period in the planning horizion
+        :return:
+        """
+        #Fetching the solution dataframe
+        df = self.get_second_stage_variables_df()
+        scenarios = df.index.get_level_values("Scenario").unique()
 
+        #Declaring a list for storing the x values
+        x_values = []
 
-            print("Optimal solution found:")
-            # Print values of continuous variables w
-            print("Values of w:")
-            for s in range(self.s_size):
-                data_list.append([])
-                for f in range(self.f_size):
-                    for t_hat in range(self.t_size):
-                        for t in range(t_hat, self.t_size):
-                            if (self.x[f, t_hat, t, s].x) > 5:
-                                print(
-                                    f"x[{f},{t_hat},{t},{s}] = {round(self.x[f, t_hat, t, s].x / 1000)}",
-                                    f"employ_bin[{f},{t_hat},{t},{s}] = {round(self.employ_bin[t, s].x)}",
-                                    "\n"
-                                    f"w[{f},{t_hat},{t},{s}] = {round(self.w[f, t_hat, t, s].x / 1000)}",
-                                    f"harvest_bin[{f},{t_hat},{t},{s}] = {round(self.harvest_bin[t, s].x)}"
-                                )  # , f"w[{f},{t_hat},{t},{s}] = {w[f,t_hat, t, s].x/1000}") #Divide by 1000 to get print in tonnes
-                                data_list[s].append(self.x[f, t_hat, t, s].x / 1000)
+        #Iterating through the dataframe to sum together the biomass at location for every site
+        for s in scenarios:
+            scenarios_x_values = []
+            for t in range(self.t_size):
+                x_t = 0
+                for t_hat in range(self.t_size):
+                    for f in range(self.f_size):
+                        x_t += df.loc[(s, f, t_hat, t)]["X"] if (s, f, t_hat, t) in df.index else 0.0
 
+                scenarios_x_values.append(x_t)
+            x_values.append(scenarios_x_values)
 
-            for f in range(self.f_size):
-                for t in range(self.t_size):
-                    #if (self.y[f, t].x) > 5:
-                        print(f"y[{f},{t}] = {self.y[f, t].x / 1000}", f"deploy type bin[{f},{t}] = {self.deploy_type_bin[f, t].x}", f"deploy bin[{f},{t}] = {self.deploy_bin[t].x }")  # Divide by 1000 to get print in tonnes
+        #Declaring a variable for storing the x-axis to be used in the plot
+        x_axis = np.arange(0,self.t_size)
 
-        else:
-            print("No optimal solution found.")
+        #Adding to the plots
+        for scenario in x_values:
+            plt.plot(x_axis, scenario)
 
-        for sublist in data_list:
-            line_style = '-' if sublist[-1] == 0 else '--'
-            plt.plot(sublist[:-1], label=f'Line Type: {line_style}')
+        plt.title(f"Biomass at site {self.site.name}")
+        plt.ylabel("Biomass")
+        plt.xlabel("Periods")
 
-        plt.legend()
-        plt.xlabel('Periods')
-        plt.ylabel('Biomass')
-        plt.title('Biomass plot')
         plt.show()
+
+
+
+
+
+        pass
 
     def get_deploy_period_list(self):
         deploy_period_list = [i for i in range(0, self.t_size) if self.deploy_bin[i].x == 1]
@@ -285,7 +297,9 @@ class SubProblem:
         df = pd.DataFrame(data_storage, index=[f"Smolt type {f}" for f in range(self.f_size)])
         return df
 
-    def get_deploy_amounts_df(self, deploy_periods_list):
+    def get_deploy_amounts_df(self):
+        deploy_periods_list = self.get_deploy_period_list()
+
         data_storage = []
         for f in range(self.f_size):
             deploy_amounts_f = [self.y[f,t].x for t in deploy_periods_list]
@@ -294,12 +308,14 @@ class SubProblem:
         df = pd.DataFrame(data_storage, index=[f"Smolt type {f}" for f in range(self.f_size)], columns=deploy_periods_list)
         return df
 
-    def get_second_stage_variables_df(self, deploy_period_list):
+    def get_second_stage_variables_df(self):
         """
         This is the for loop from hell. 
         It iterates through all non-zero variables and writes the variables for X, W, Employ_bin and Harvest_bin to a ginormous dataframe
         Please don't touch it
         """
+        deploy_period_list = self.get_deploy_period_list()
+
         df_storage = []
         for s in range(self.s_size):
             l1_df_storage = []
@@ -322,6 +338,10 @@ class SubProblem:
             df_storage.append(pd.concat(l1_df_storage, keys=keys_l1))
         keys = [i for i in range(len(df_storage))]
         df = pd.concat(df_storage, keys=keys)
+
+        df.index.names = ["Scenario", "Smolt type", "Deploy period", "Period"]
+
+        self.second_stage_variables = df
 
         return df
 

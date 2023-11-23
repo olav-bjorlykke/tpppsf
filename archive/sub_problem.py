@@ -22,7 +22,7 @@ scenarios_obj = Scenarios(input_data.temperatures_df)
 #Declaring an instance of the site class to get site spesific information
 site = Site(
     scenario_temperatures = scenarios_obj.scenario_temperatures_per_site_df.loc["Senja"],
-    capacity = 3000.0 * 1000,
+    MAB_capacity=3000.0 * 1000,
     init_biomass = 500 * 1000,
     TGC_array= input_data.TGC_df.iloc[0],
     smolt_weights = parameters.smolt_weights,
