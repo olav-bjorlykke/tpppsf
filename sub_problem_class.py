@@ -25,9 +25,9 @@ class SubProblem:
         self.model = gp.Model(f"Single site solution {self.site.name}")
 
         #Setting variables to contain the size of sets
-        self.f_size = 2  #TODO: declare using the smolt set
+        self.f_size = 1  #TODO: declare using the smolt set
         self.t_size = self.parameters.number_periods
-        self.s_size = 5  #TODO: len(parameters.scenario_probabilities)
+        self.s_size = 2  #TODO: len(parameters.scenario_probabilities)
 
         #Defining some variables from the data objects for easier reference
         self.growth_factors = self.site.growth_per_scenario_df
@@ -78,7 +78,7 @@ class SubProblem:
     def set_objective(self):
         self.model.setObjective(  # This is the objective (5.2) - which represents the objective for biomass maximization
             gp.quicksum(
-                self.parameters.scenario_probabilities[s] *
+                self.scenario.scenario_probabilities[s] *
                 gp.quicksum(
                     self.w[f, t_hat, t, s]
                     for f in range(self.f_size)

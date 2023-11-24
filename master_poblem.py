@@ -56,6 +56,7 @@ class MasterProblem:
     def declare_variables(self):
         #Declaring the decision variable
         self.lambda_var = self.model.addVars(len(self.locations_l), len(self.iterations_k), vtype=GRB.CONTINUOUS, lb=0)
+        self.penalty_var = self.model.addVars(len(self.locations_l))
 
     def set_objective(self):
         self.model.setObjective(
@@ -71,6 +72,9 @@ class MasterProblem:
                     )
                  for s in self.scenarios_s
              )
+             -
+             gp.quicksum(self.penalty_var[l] * 100000000000 for l in self.locations_l)  #This variable is added as a penalty variable, and helps with the initialization of the problem. In an optimal solution it will never be used.
+
             ,sense=GRB.MAXIMIZE
         )
 
@@ -79,7 +83,9 @@ class MasterProblem:
             gp.quicksum(
                 self.lambda_var[l, k]
                 for k in self.iterations_k
-            ) == 1
+            )
+            +
+            self.penalty_var[l] == 1
             for l in self.locations_l
         )
 
@@ -97,7 +103,7 @@ class MasterProblem:
                         for l in self.locations_l
                         for k in self.iterations_k
                     )
-                    <= 5000*1000*3 #TODO: set a prober limit
+                    <= 2300*1000*3 #TODO: set a prober limit
 
                     , name=f"MAB constraint[{s},{t}]"
                 )
@@ -145,7 +151,7 @@ class MasterProblem:
         df.index.names = ["Location"]
         return df
 
-    def get_reduced_costs_df(self):
+    def print_reduced_costs_df(self):
         if self.model.status == GRB.OPTIMAL:
             shadow_prices = self.model.getAttr("Pi", self.model.getConstrs())
             for i, constraint in enumerate(self.model.getConstrs()):

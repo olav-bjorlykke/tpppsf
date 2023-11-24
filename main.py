@@ -89,7 +89,7 @@ master_poblem_test.columns.to_excel("./results/master_problem.xlsx", index=True)
 
 master_poblem_test.run_and_solve_master_problem()
 
-master_poblem_test.get_reduced_costs_df()
+master_poblem_test.print_reduced_costs_df()
 
 
 
