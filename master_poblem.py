@@ -79,15 +79,16 @@ class MasterProblem:
         )
 
     def add_convexity_constraint(self):
-        self.model.addConstrs(
-            gp.quicksum(
-                self.lambda_var[l, k]
-                for k in self.iterations_k
+        for l in self.locations_l:
+            self.model.addConstr(
+                gp.quicksum(
+                    self.lambda_var[l, k]
+                    for k in self.iterations_k
+                )
+                +
+                self.penalty_var[l] == 1
+                , name=f"Convexity;{l}"
             )
-            +
-            self.penalty_var[l] == 1
-            for l in self.locations_l
-        )
 
     def add_MAB_constraint(self):
         for s in self.scenarios_s:
@@ -105,7 +106,7 @@ class MasterProblem:
                     )
                     <= 2300*1000*3 #TODO: set a prober limit
 
-                    , name=f"MAB constraint[{s},{t}]"
+                    , name=f"MAB Constr;{s},{t}"
                 )
 
     def run_and_solve_master_problem(self):
@@ -129,6 +130,7 @@ class MasterProblem:
         #Print solution
         self.print_solution()
 
+
     def print_solution(self):
         if self.model.status == GRB.OPTIMAL:
             print("Optimal Master solution found:")
@@ -151,11 +153,57 @@ class MasterProblem:
         df.index.names = ["Location"]
         return df
 
-    def print_reduced_costs_df(self):
+    def print_shadow_prices(self):#TODO: Find a smarter way to represent this data rather than a list
+        #Checks if the model has been solved to optimality
         if self.model.status == GRB.OPTIMAL:
+            #Gets the shadow prices from the model, it is in the form of a dictionary
             shadow_prices = self.model.getAttr("Pi", self.model.getConstrs())
+            #Iterates through all constraints in the dictionary
             for i, constraint in enumerate(self.model.getConstrs()):
+                #Prints the constraint name - and the reduced cost related to that constraint
                 print(f"Shadow price for constraint {i + 1} ({constraint.constrName}): {shadow_prices[i]}")
+
+    def get_convexity_constr_shadow_prices_list(self):#TODO: Find a smarter way to represent this data rather than a list
+        # Checks if the model has been solved to optimality
+        if self.model.status == GRB.OPTIMAL:
+            # Gets the shadow prices from the model, it is in the form of a dictionary. The Pi argument specifies that we get the shadow price attribute
+            shadow_prices = self.model.getAttr("Pi", self.model.getConstrs())
+            #Creates a list for storing the shadow prices
+            shadow_prices_list = []
+            #Iterates thorugh all constraints
+            for i, constraint in enumerate(self.model.getConstrs()):
+                #Splits the name into a constraint type component and a constraint number component
+                #The type corresponds to the function for adding constraints - MAB and convexity in this model
+                #The constraint number is the enumeration of the particular constraint
+                constraint_type = constraint.constrName.split(";")[0]
+                if constraint_type == "Convexity":
+                    constraint_number = int(constraint.constrName.split(";")[1])
+                    shadow_prices_list.append([constraint_number, shadow_prices[i]])
+
+            shadow_prices_df = pd.DataFrame([elem[1] for elem in shadow_prices_list],index=[elem[0] for elem in shadow_prices_list])
+
+            return shadow_prices_df
+
+    def get_MAB_constr_shadow_prices_list(self):
+        # Checks if the model has been solved to optimality
+        if self.model.status == GRB.OPTIMAL:
+            # Gets the shadow prices from the model, it is in the form of a dictionary. The Pi argument specifies that we get the shadow price attribute
+            shadow_prices = self.model.getAttr("Pi", self.model.getConstrs())
+            # Creates a list for storing the shadow prices
+            shadow_prices_list = []
+            # Iterates thorugh all constraints
+            for i, constraint in enumerate(self.model.getConstrs()):
+                # Splits the name into a constraint type component and a constraint number component
+                # The type corresponds to the function for adding constraints - MAB and convexity in this model
+                # The constraint number is the enumeration of the particular constraint
+                constraint_type = constraint.constrName.split(";")[0]
+                if constraint_type == "MAB Constr":
+                    constraint_number_list = constraint.constrName.split(";")[1].split(",")
+                    shadow_prices_list.append([[int(constraint_number_list[0]), int(constraint_number_list[1])], shadow_prices[i]])
+
+            shadow_prices_df = pd.DataFrame([elem[1] for elem in shadow_prices_list], index=[elem[0] for elem in shadow_prices_list])
+            return shadow_prices_df
+
 
 
 

@@ -84,12 +84,14 @@ master_poblem_test = MasterProblem(
     initial_column=df
 )
 master_poblem_test.add_new_column_to_columns(df)
-
 master_poblem_test.columns.to_excel("./results/master_problem.xlsx", index=True)
 
 master_poblem_test.run_and_solve_master_problem()
 
-master_poblem_test.print_reduced_costs_df()
+print(master_poblem_test.get_convexity_constr_shadow_prices_list())
+print(master_poblem_test.get_MAB_constr_shadow_prices_list())
+
+
 
 
 
