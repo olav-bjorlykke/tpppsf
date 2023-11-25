@@ -64,62 +64,53 @@ sub_problem_test_3 = SubProblem(
     site_obj=site_test_3
 )
 
-sub_problems = [sub_problem_test_1, sub_problem_test_2, sub_problem_test_3]
-
-# Solving the sub problems
 sub_problem_test_1.solve_and_print_model()
 sub_problem_test_2.solve_and_print_model()
 sub_problem_test_3.solve_and_print_model()
 
-# Setting column dataframes
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+
 df_1 = sub_problem_test_1.get_second_stage_variables_df()
 df_2 = sub_problem_test_2.get_second_stage_variables_df()
 df_3 = sub_problem_test_3.get_second_stage_variables_df()
 
-# Concatinating into a single columns
-df = pd.concat([df_1, df_2, df_3], keys=[i for i in range(len([df_1, df_2, df_3]))])
+df = pd.concat([df_1,df_2, df_3], keys=[i for i in range(len([df_1,df_2, df_3]))])
 
 
-master_poblem = MasterProblem(
+master_poblem_test = MasterProblem(
     parameters=GlobalParameters(),
     scenarios=scenarios_test,
     initial_column=df
 )
+master_poblem_test.add_new_column_to_columns_df(df)
+master_poblem_test.columns.to_excel("./results/master_problem.xlsx", index=True)
 
-shadow_prices = None
-lambda_list = []
+master_poblem_test.run_and_solve_master_problem()
+shadow_prices = master_poblem_test.get_MAB_constr_shadow_prices_df()
+print(shadow_prices)
 
-for i in range(5):
-    #Solving the sub problems
-    sub_problem_test_1.solve_and_print_model()
-    sub_problem_test_2.solve_and_print_model()
-    sub_problem_test_3.solve_and_print_model()
+sub_problem_test_1.set_shadow_prices_df(shadow_prices)
+sub_problem_test_2.set_shadow_prices_df(shadow_prices)
+sub_problem_test_3.set_shadow_prices_df(shadow_prices)
 
-    #Setting column dataframes
-    df_1 = sub_problem_test_1.get_second_stage_variables_df()
-    df_2 = sub_problem_test_2.get_second_stage_variables_df()
-    df_3 = sub_problem_test_3.get_second_stage_variables_df()
+sub_problem_test_1.solve_and_print_model()
+sub_problem_test_2.solve_and_print_model()
+sub_problem_test_3.solve_and_print_model()
 
-    #Concatinating into a single columns
-    df = pd.concat([df_1, df_2, df_3], keys=[i for i in range(len([df_1, df_2, df_3]))])
+df_4 = sub_problem_test_1.get_second_stage_variables_df()
+df_5 = sub_problem_test_2.get_second_stage_variables_df()
+df_6 = sub_problem_test_3.get_second_stage_variables_df()
 
-    #Adds the new column to the master problem
-    master_poblem.add_new_column_to_columns_df(df)
+df = pd.concat([df_4,df_5, df_6], keys=[i for i in range(len([df_4,df_5, df_6]))])
 
-    #Solving the master problem
-    master_poblem.run_and_solve_master_problem()
+master_poblem_test.add_new_column_to_columns_df(df)
+master_poblem_test.columns.to_excel("./results/master_problem_2.xlsx", index=True)
 
-    lambda_list.append(master_poblem.get_results_df())
+master_poblem_test.run_and_solve_master_problem()
+print(master_poblem_test.get_MAB_constr_shadow_prices_df())
 
-    #Printing the shadow prices to the shadow prices variable
-    shadow_prices = master_poblem.get_MAB_constr_shadow_prices_df()
 
-    #Putting shadow prices into subproblem
-    sub_problem_test_1.set_shadow_prices_df(shadow_prices)
-    sub_problem_test_2.set_shadow_prices_df(shadow_prices)
-    sub_problem_test_3.set_shadow_prices_df(shadow_prices)
 
-    #Repeat flow
 
-for elem in lambda_list:
-    print(elem)
+
