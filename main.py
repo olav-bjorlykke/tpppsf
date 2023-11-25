@@ -87,11 +87,28 @@ master_poblem_test.add_new_column_to_columns_df(df)
 master_poblem_test.columns.to_excel("./results/master_problem.xlsx", index=True)
 
 master_poblem_test.run_and_solve_master_problem()
+shadow_prices = master_poblem_test.get_MAB_constr_shadow_prices_df()
+print(shadow_prices)
 
-print(master_poblem_test.get_convexity_constr_shadow_prices_df())
+sub_problem_test_1.set_shadow_prices_df(shadow_prices)
+sub_problem_test_2.set_shadow_prices_df(shadow_prices)
+sub_problem_test_3.set_shadow_prices_df(shadow_prices)
+
+sub_problem_test_1.solve_and_print_model()
+sub_problem_test_2.solve_and_print_model()
+sub_problem_test_3.solve_and_print_model()
+
+df_4 = sub_problem_test_1.get_second_stage_variables_df()
+df_5 = sub_problem_test_2.get_second_stage_variables_df()
+df_6 = sub_problem_test_3.get_second_stage_variables_df()
+
+df = pd.concat([df_4,df_5, df_6], keys=[i for i in range(len([df_4,df_5, df_6]))])
+
+master_poblem_test.add_new_column_to_columns_df(df)
+master_poblem_test.columns.to_excel("./results/master_problem_2.xlsx", index=True)
+
+master_poblem_test.run_and_solve_master_problem()
 print(master_poblem_test.get_MAB_constr_shadow_prices_df())
-
-
 
 
 

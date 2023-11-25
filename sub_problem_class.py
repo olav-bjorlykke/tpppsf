@@ -13,16 +13,14 @@ class SubProblem:
                  input_data_obj,
                  parameters_obj,
                  scenarios_obj,
-                 site_obj
+                 site_obj,
+                 MAB_shadow_prices_df = pd.DataFrame()
                  ):
         #Imported classes, containing parameters and data
         self.input_data = input_data_obj
         self.parameters = parameters_obj
         self.scenario = scenarios_obj
         self.site = site_obj
-
-        #Creating model object
-        self.model = gp.Model(f"Single site solution {self.site.name}")
 
         #Setting variables to contain the size of sets
         self.f_size = 1  #TODO: declare using the smolt set
@@ -34,13 +32,16 @@ class SubProblem:
         self.smolt_weights = self.parameters.smolt_weights
         self.growth_sets = self.site.growth_sets
         self.site = site_obj
+        self.MAB_shadow_prices_df = MAB_shadow_prices_df
 
     def solve_and_print_model(self):
+        self.model = gp.Model(f"Single site solution {self.site.name}")
+
         #Declaing variables
         self.declare_variables()
 
         #Setting objective
-        self.set_objective()
+        self.set_decomped_objective()
 
         #Adding constraints
         self.add_smolt_deployment_constraints()
@@ -60,8 +61,6 @@ class SubProblem:
         self.plot_solutions_x_values()
 
         #Putting solution into variables for export
-
-
 
 
     def declare_variables(self):
@@ -89,6 +88,27 @@ class SubProblem:
             )
             , GRB.MAXIMIZE
         )
+
+    def set_decomped_objective(self):
+        if not self.MAB_shadow_prices_df.empty:
+            self.model.setObjective(
+                # This is the objective (5.2) - which represents the objective for biomass maximization
+                gp.quicksum(
+                    self.scenario.scenario_probabilities[s] *
+                    gp.quicksum(
+                        self.w[f, t_hat, t, s] -
+                        self.x[f, t_hat, t, s] * self.MAB_shadow_prices_df.loc[(s, t)] if (s,t) in self.MAB_shadow_prices_df.index else 0.0
+                        for f in range(self.f_size)
+                        for t_hat in range(self.t_size)
+                        for t in range(min(t_hat + self.parameters.temp_growth_period, self.t_size), self.t_size)
+                    )
+                    for s in range(self.s_size)
+                )
+                , GRB.MAXIMIZE
+            )
+
+        else:
+            self.set_objective()
 
     def add_smolt_deployment_constraints(self):
         self.model.addConstrs(
@@ -344,5 +364,8 @@ class SubProblem:
         self.second_stage_variables = df
 
         return df
+
+    def set_shadow_prices_df(self, shadow_prices_df):
+        self.MAB_shadow_prices_df = shadow_prices_df
 
 
