@@ -153,7 +153,7 @@ class MasterProblem:
         df.index.names = ["Location"]
         return df
 
-    def print_shadow_prices(self):#TODO: Find a smarter way to represent this data rather than a list
+    def print_shadow_prices(self):
         #Checks if the model has been solved to optimality
         if self.model.status == GRB.OPTIMAL:
             #Gets the shadow prices from the model, it is in the form of a dictionary
@@ -163,7 +163,7 @@ class MasterProblem:
                 #Prints the constraint name - and the reduced cost related to that constraint
                 print(f"Shadow price for constraint {i + 1} ({constraint.constrName}): {shadow_prices[i]}")
 
-    def get_convexity_constr_shadow_prices_list(self):#TODO: Find a smarter way to represent this data rather than a list
+    def get_convexity_constr_shadow_prices_list(self):
         # Checks if the model has been solved to optimality
         if self.model.status == GRB.OPTIMAL:
             # Gets the shadow prices from the model, it is in the form of a dictionary. The Pi argument specifies that we get the shadow price attribute
@@ -180,30 +180,47 @@ class MasterProblem:
                     constraint_number = int(constraint.constrName.split(";")[1])
                     shadow_prices_list.append([constraint_number, shadow_prices[i]])
 
-            shadow_prices_df = pd.DataFrame([elem[1] for elem in shadow_prices_list],index=[elem[0] for elem in shadow_prices_list])
+            df = pd.DataFrame([elem[1] for elem in shadow_prices_list],index=[elem[0] for elem in shadow_prices_list])
+            df.index.names = ["Location"]
 
-            return shadow_prices_df
+            return df
 
     def get_MAB_constr_shadow_prices_list(self):
         # Checks if the model has been solved to optimality
         if self.model.status == GRB.OPTIMAL:
             # Gets the shadow prices from the model, it is in the form of a dictionary. The Pi argument specifies that we get the shadow price attribute
             shadow_prices = self.model.getAttr("Pi", self.model.getConstrs())
-            # Creates a list for storing the shadow prices
+            # Create a list for storing the relevant shadow prices, and corresponding indices
             shadow_prices_list = []
-            # Iterates thorugh all constraints
+            indices = []
+            # Iterates through all constraints
             for i, constraint in enumerate(self.model.getConstrs()):
-                # Splits the name into a constraint type component and a constraint number component
-                # The type corresponds to the function for adding constraints - MAB and convexity in this model
-                # The constraint number is the enumeration of the particular constraint
+                #Fetches the constraint name from the constr object and split them into name and indices
+                #The constraint name string is structured like this:  "{Type name};{Indice 1}, {Indice 2}, ..."
+
+                #Fetching the constraint name
                 constraint_type = constraint.constrName.split(";")[0]
+                #Fetches the indices of the constraint
+                constraint_indices = constraint.constrName.split(";")[1].split(",")
+                #Transforms the indices from list of string elements into a list of int elements
+                constraint_indices = [int(elem) for elem in constraint_indices]
+                # Ensures that we only export the shadow prices for the constraints of the correct type
                 if constraint_type == "MAB Constr":
-                    constraint_number_list = constraint.constrName.split(";")[1].split(",")
-                    shadow_prices_list.append([[int(constraint_number_list[0]), int(constraint_number_list[1])], shadow_prices[i]])
+                    #Appends the indices and the shadow prices to the storage lists
+                    indices.append((constraint_indices[0], constraint_indices[1]))
+                    shadow_prices_list.append(shadow_prices[i])
 
-            shadow_prices_df = pd.DataFrame([elem[1] for elem in shadow_prices_list], index=[elem[0] for elem in shadow_prices_list])
-            return shadow_prices_df
+            #Constructs the index
+            index = pd.MultiIndex.from_tuples(indices, names=["Scenario", "Period"])
 
+            #Constructs the dataframe
+            df = pd.DataFrame(shadow_prices_list, index=index)
+
+            #Reorders the dataframe based on the index values
+            df.sort_index(level="Period", inplace=True)
+            df.sort_index(level="Scenario", inplace=True)
+
+            return df
 
 
 
