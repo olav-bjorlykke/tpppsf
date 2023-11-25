@@ -83,13 +83,13 @@ master_poblem_test = MasterProblem(
     scenarios=scenarios_test,
     initial_column=df
 )
-master_poblem_test.add_new_column_to_columns(df)
+master_poblem_test.add_new_column_to_columns_df(df)
 master_poblem_test.columns.to_excel("./results/master_problem.xlsx", index=True)
 
 master_poblem_test.run_and_solve_master_problem()
 
-print(master_poblem_test.get_convexity_constr_shadow_prices_list())
-print(master_poblem_test.get_MAB_constr_shadow_prices_list())
+print(master_poblem_test.get_convexity_constr_shadow_prices_df())
+print(master_poblem_test.get_MAB_constr_shadow_prices_df())
 
 
 
