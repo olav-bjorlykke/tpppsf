@@ -89,6 +89,7 @@ master_poblem = MasterProblem(
 shadow_prices = None
 lambda_list = []
 
+
 for i in range(12):
     #Solving the sub problems
     sub_problem_test_1.solve_and_print_model()
@@ -109,7 +110,7 @@ for i in range(12):
     #Solving the master problem
     master_poblem.run_and_solve_master_problem()
 
-    lambda_list.append(master_poblem.get_results_df())
+    lambda_list.append([master_poblem.get_results_df(), master_poblem.is_model_solved])
 
     #Printing the shadow prices to the shadow prices variable
     shadow_prices = master_poblem.get_MAB_constr_shadow_prices_df()
@@ -122,4 +123,4 @@ for i in range(12):
     #Repeat flow
 
 for elem in lambda_list:
-    print(elem)
+    print(elem[0], elem[1])
