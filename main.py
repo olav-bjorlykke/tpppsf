@@ -89,7 +89,7 @@ master_poblem = MasterProblem(
 shadow_prices = None
 lambda_list = []
 
-for i in range(5):
+for i in range(12):
     #Solving the sub problems
     sub_problem_test_1.solve_and_print_model()
     sub_problem_test_2.solve_and_print_model()

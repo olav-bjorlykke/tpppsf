@@ -9,6 +9,7 @@ from scenarios import Scenarios
 import matplotlib.pyplot as plt
 
 class SubProblem:
+    iterations = 0
     def __init__(self,
                  input_data_obj,
                  parameters_obj,
@@ -59,9 +60,9 @@ class SubProblem:
         #Printing solution
         self.print_solution_to_excel()
         self.plot_solutions_x_values()
+        self.iterations += 1
 
         #Putting solution into variables for export
-
 
     def declare_variables(self):
         self.x = self.model.addVars(self.f_size, self.t_size, self.t_size, self.s_size, vtype=GRB.CONTINUOUS, lb=0)
@@ -292,14 +293,13 @@ class SubProblem:
         for scenario in x_values:
             plt.plot(x_axis, scenario)
 
-        plt.title(f"Biomass at site {self.site.name}")
+        plt.title(f"Biomass at site {self.site.name} iteration {self.iterations}")
         plt.ylabel("Biomass")
         plt.xlabel("Periods")
+        path = f'results/plots/{self.site.name}{self.iterations}.png'
+        plt.savefig(path)
 
         plt.show()
-
-
-
 
 
         pass
