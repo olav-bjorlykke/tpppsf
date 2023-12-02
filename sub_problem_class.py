@@ -24,9 +24,9 @@ class SubProblem:
         self.site = site_obj
 
         #Setting variables to contain the size of sets
-        self.f_size = 1  #TODO: declare using the smolt set
+        self.f_size = 2  #TODO: declare using the smolt set
         self.t_size = self.parameters.number_periods
-        self.s_size = 2  #TODO: len(parameters.scenario_probabilities)
+        self.s_size = 4  #TODO: len(parameters.scenario_probabilities)
 
         #Defining some variables from the data objects for easier reference
         self.growth_factors = self.site.growth_per_scenario_df
@@ -236,7 +236,6 @@ class SubProblem:
 
     def add_initial_condition_constraint(self): #TODO: Add initial constraints
         pass
-
     def add_forcing_constraints(self):
         self.model.addConstrs(
             # TODO:This is a forcing constraint that is not in the mathematical model, put it in the model somehow

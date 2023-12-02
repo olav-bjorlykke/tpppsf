@@ -5,7 +5,7 @@ from input_data import InputData
 from site_class import Site
 from scenarios import Scenarios
 from sub_problem_class import SubProblem
-from master_poblem import MasterProblem
+from master_problem import MasterProblem
 
 
 input_test =InputData()
@@ -14,7 +14,9 @@ scenarios_test = Scenarios(input_test.temperatures_df)
 site_test_1 = Site(
     scenario_temperatures=scenarios_test.scenario_temperatures_per_site_df.loc["Senja"],
     MAB_capacity=4000 * 1000,
-    init_biomass=100,
+    init_biomass=100 * 1000,
+    init_avg_weight=2000,
+    init_biomass_months_deployed=10,
     TGC_array=input_test.TGC_df.iloc[0],
     smolt_weights=[150, 200, 250],
     weight_req_for_harvest = 3000.0,
@@ -41,76 +43,6 @@ site_test_3 = Site(
     site_name="Vesteralen"
 )
 
-
-sub_problem_test_1 = SubProblem(
-    input_data_obj=input_test,
-    parameters_obj= GlobalParameters(),
-    scenarios_obj=scenarios_test,
-    site_obj=site_test_1
-)
-
-
-sub_problem_test_2 = SubProblem(
-    input_data_obj=input_test,
-    parameters_obj=GlobalParameters(),
-    scenarios_obj=scenarios_test,
-    site_obj=site_test_2
-)
-
-sub_problem_test_3 = SubProblem(
-    input_data_obj=input_test,
-    parameters_obj=GlobalParameters(),
-    scenarios_obj=scenarios_test,
-    site_obj=site_test_3
-)
-
-sub_problem_test_1.solve_and_print_model()
-sub_problem_test_2.solve_and_print_model()
-sub_problem_test_3.solve_and_print_model()
-
-pd.set_option('display.max_rows', None)
-pd.set_option('display.max_columns', None)
-
-df_1 = sub_problem_test_1.get_second_stage_variables_df()
-df_2 = sub_problem_test_2.get_second_stage_variables_df()
-df_3 = sub_problem_test_3.get_second_stage_variables_df()
-
-df = pd.concat([df_1,df_2, df_3], keys=[i for i in range(len([df_1,df_2, df_3]))])
-
-
-master_poblem_test = MasterProblem(
-    parameters=GlobalParameters(),
-    scenarios=scenarios_test,
-    initial_column=df
-)
-master_poblem_test.add_new_column_to_columns_df(df)
-master_poblem_test.columns.to_excel("./results/master_problem.xlsx", index=True)
-
-master_poblem_test.run_and_solve_master_problem()
-shadow_prices = master_poblem_test.get_MAB_constr_shadow_prices_df()
-print(shadow_prices)
-
-sub_problem_test_1.set_shadow_prices_df(shadow_prices)
-sub_problem_test_2.set_shadow_prices_df(shadow_prices)
-sub_problem_test_3.set_shadow_prices_df(shadow_prices)
-
-sub_problem_test_1.solve_and_print_model()
-sub_problem_test_2.solve_and_print_model()
-sub_problem_test_3.solve_and_print_model()
-
-df_4 = sub_problem_test_1.get_second_stage_variables_df()
-df_5 = sub_problem_test_2.get_second_stage_variables_df()
-df_6 = sub_problem_test_3.get_second_stage_variables_df()
-
-df = pd.concat([df_4,df_5, df_6], keys=[i for i in range(len([df_4,df_5, df_6]))])
-
-master_poblem_test.add_new_column_to_columns_df(df)
-master_poblem_test.columns.to_excel("./results/master_problem_2.xlsx", index=True)
-
-master_poblem_test.run_and_solve_master_problem()
-print(master_poblem_test.get_MAB_constr_shadow_prices_df())
-
-
-
-
+print(site_test_1.growth_sets)
+print(site_test_1.calculate_weight_df(site_test_1.scenario_temps.iloc[1], smolt_weight=150))
 

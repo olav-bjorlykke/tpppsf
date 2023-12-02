@@ -5,7 +5,7 @@ from input_data import InputData
 from site_class import Site
 from scenarios import Scenarios
 from sub_problem_class import SubProblem
-from master_poblem import MasterProblem
+from master_problem import MasterProblem
 
 
 input_test =InputData()
@@ -79,8 +79,7 @@ df_3 = sub_problem_test_3.get_second_stage_variables_df()
 # Concatinating into a single columns
 df = pd.concat([df_1, df_2, df_3], keys=[i for i in range(len([df_1, df_2, df_3]))])
 
-
-master_poblem = MasterProblem(
+master_problem_test = MasterProblem(
     parameters=GlobalParameters(),
     scenarios=scenarios_test,
     initial_column=df
@@ -90,7 +89,7 @@ shadow_prices = None
 lambda_list = []
 
 
-for i in range(12):
+while not master_problem_test.is_model_solved:
     #Solving the sub problems
     sub_problem_test_1.solve_and_print_model()
     sub_problem_test_2.solve_and_print_model()
@@ -105,15 +104,15 @@ for i in range(12):
     df = pd.concat([df_1, df_2, df_3], keys=[i for i in range(len([df_1, df_2, df_3]))])
 
     #Adds the new column to the master problem
-    master_poblem.add_new_column_to_columns_df(df)
+    master_problem_test.add_new_column_to_columns_df(df)
 
     #Solving the master problem
-    master_poblem.run_and_solve_master_problem()
+    master_problem_test.run_and_solve_master_problem()
 
-    lambda_list.append([master_poblem.get_results_df(), master_poblem.is_model_solved])
+    lambda_list.append([master_problem_test.get_results_df(), master_problem_test.is_model_solved])
 
     #Printing the shadow prices to the shadow prices variable
-    shadow_prices = master_poblem.get_MAB_constr_shadow_prices_df()
+    shadow_prices = master_problem_test.get_MAB_constr_shadow_prices_df()
 
     #Putting shadow prices into subproblem
     sub_problem_test_1.set_shadow_prices_df(shadow_prices)

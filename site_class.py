@@ -11,7 +11,10 @@ class Site:
     growth_sets = None                                      #A datafrane containing the set of periods where harvest is not allowed, following release for all scenarios and smolt weights
     max_periods_deployed = None                             #Max number of periods a cohort can be deployed
     MAB_capacity = None                                     #Max biomass capacity at the site
-    init_biomass = None                                     #Biomass at the site at the start of the planning period
+    init_biomass_at_site = False
+    init_biomass = 0                                        #Biomass at the site at the start of the planning period
+    init_avg_weight = 0                                     #The average weight of a salmon if the site has biomass deployed
+    num_months_deployed = 0                                 #The number of months the cohort has been deployed, if there is biomass at the site
     growth_per_scenario_df = None                           #A dataframe containing the growth factor for every period, scenario, smolt weight, deploy period combination
     weight_dev_per_scenario_df = None                       #A dataframe containing the weight development for every period, scenario, smolt weight, deploy period combination
     name = None
@@ -25,20 +28,27 @@ class Site:
     def __init__(self,
                  scenario_temperatures,
                  MAB_capacity,
-                 init_biomass,
                  TGC_array,
                  smolt_weights,
                  weight_req_for_harvest,
-                 site_name = "Not Set"
+                 site_name = "Not Set",
+                 init_biomass = 0,
+                 init_avg_weight = 0,
+                 init_biomass_months_deployed=0,
                  ):
         #Setting class variables
         self.TGC_array = TGC_array                                                #Array of all TGC for a possible deploy period
         self.MAB_capacity = MAB_capacity                                          #Max biomass capacity at a single site
         self.init_biomass = init_biomass                                          #Initial biomass at the site, i.e biomass in the first period
+        self.init_avg_weight = init_avg_weight
+        self.num_months_deployed = init_biomass_months_deployed
         self.smolt_weights = smolt_weights                                        #Array of possible smolt weights
         self.scenario_temps = scenario_temperatures                               #Array of scenario temperatures for the site
         self.max_periods_deployed = len(TGC_array)                                #The maximum number of periods a cohort can be deployed
         self.name = site_name                                                     #The name of the site
+
+        #Setting the init biomass at site variable
+        if init_biomass != 0: self.init_biomass_at_site = True
 
         #Calulating growth and weight development dataframes for all scenarios and possible smolt weights
         self.growth_per_scenario_df = self.calculate_growth_df_for_scenarios_and_smolt_weights(smolt_weights, scenario_temperatures)
@@ -201,7 +211,7 @@ class Site:
         G = new_weight/weight
         return G
 
-    def calculate_weight_development(self, weight, TGC, temperature, duration): #TODO: put into its own class or set of fucntions along with growth factor
+    def calculate_weight_development(self, weight, TGC, temperature, duration=30): #TODO: put into its own class or set of fucntions along with growth factor
         """
         A function calculating the weight of a single salmon in period t+1, given the weight in period t. The calculation is based on Aasen(2021) and Thorarensen & Farrel (2011)
         :param weight: weight in period t
@@ -213,10 +223,10 @@ class Site:
         new_weight = (weight**(1/3) + TGC*temperature*duration/1000)**(3)
         return new_weight
 
-    def calculate_weight_df(self, temp_array, init_weight):
+    def calculate_weight_df(self, temp_array, smolt_weight):
         """
         A function that calculates the expected weigh development for all possible release periods in a planning horizon
-        :param init_weight: The deploy weight of a Salmon
+        :param smolt_weight: The deploy weight of a Salmon
         :return: weight_df  -  an array containing expected weight development for every possible release period and subsequent growth and harvest periods
         """
         #Defining a weight array to contain the calculated data
@@ -224,14 +234,22 @@ class Site:
         weight_array = np.zeros((number_periods, number_periods))
         for i in range(number_periods):
             #Iterate through all possible release periods i and set the initial weight
-            weight_array[i][i] = init_weight
+            weight_array[i][i] = smolt_weight
             for j in range(i, min(number_periods - 1, i + self.max_periods_deployed)):
                 #Iterate through all possible growth periods j given release period i
                 #Calculate the weight for period j+1 given the weight in period j using weight_growth() function and put into the array
                 weight = weight_array[i][j]
-                weight_array[i][j + 1] = self.calculate_weight_development(weight, temperature=temp_array[j], TGC=self.TGC_array[j - i], duration=30)
-        #Read data from array into dataframe
+                weight_array[i][j + 1] = self.calculate_weight_development(weight, temperature=temp_array[j], TGC=self.TGC_array[j - i])
+
+        if self.init_biomass_at_site:
+            weight_array[0] = self.calculate_weight_dev_of_initial_biomass(init_avg_weight=self.init_avg_weight, months_deployed=self.num_months_deployed, temp_array=temp_array)
+
+        # Read data from array into dataframe
         weight_df = pd.DataFrame(weight_array, columns=[i for i in range(number_periods)], index=[i for i in range(number_periods)])
+
+
+
+
         return weight_df
 
     def calculate_growth_df_from_weight_df(self, weight_frame):
@@ -249,10 +267,36 @@ class Site:
             for j in range(i, min(number_periods - 1, i + self.max_periods_deployed)):
                 # Iterate through all possible growth periods j given release period i
                 # Calculate the growth factor, using expected weight developments from the weight fram and input into array
-                growth_array[i][j] = weight_frame.iloc[i][j+1]/weight_frame.iloc[i][j]
+                # Checking if the current period has biomass deployed -> putting in an if / else statement to avoid divide by zero errors
+                if weight_frame.iloc[i][j] > 0:
+                    growth_array[i][j] = weight_frame.iloc[i][j+1]/weight_frame.iloc[i][j]
+                else:
+                    growth_array[i][j] = 0
         #Read data from array into dataframe
         growth_df = pd.DataFrame(growth_array, columns=[i for i in range(number_periods)],index=[i for i in range(number_periods)])
         return growth_df
+
+    def calculate_weight_dev_of_initial_biomass(self, init_avg_weight, months_deployed, temp_array):
+        #Setting the number of periods for easier use
+        number_periods = len(temp_array)
+
+        #Declaring an array to contain the weight development of the initial biomass
+        weight_dev_array = np.zeros(number_periods)
+        #Setting the weight in period 0 to be the initial average weight
+        weight_dev_array[0] = init_avg_weight
+
+        #Iterating through all periods, calculating the weight in next period based on the weight in the current period
+        for i in range(0, self.max_periods_deployed - months_deployed):
+            current_weight = weight_dev_array[i]
+            weight_in_next_period = self.calculate_weight_development(current_weight, temperature=temp_array[i], TGC=self.TGC_array[i + months_deployed])
+            weight_dev_array[i+1] = weight_in_next_period
+
+        return weight_dev_array
+
+
+
+    #TODO:Add functionality for calculating growth frame for initial biomass
+    #TODO:Add functionality for calculating growth-set for initial biomass
 
 
 
