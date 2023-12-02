@@ -93,7 +93,7 @@ shadow_prices = None
 lambda_list = []
 
 
-while not master_problem_test.is_model_solved:
+for i in range(2):
     #Solving the sub problems
     sub_problem_test_1.solve_and_print_model()
     sub_problem_test_2.solve_and_print_model()
@@ -113,7 +113,7 @@ while not master_problem_test.is_model_solved:
     #Solving the master problem
     master_problem_test.run_and_solve_master_problem()
 
-    lambda_list.append([master_problem_test.get_results_df(), master_problem_test.is_model_solved])
+    lambda_list.append(master_problem_test.get_deploy_bin_variables_df())
 
     #Printing the shadow prices to the shadow prices variable
     shadow_prices = master_problem_test.get_MAB_constr_shadow_prices_df()
@@ -125,5 +125,12 @@ while not master_problem_test.is_model_solved:
 
     #Repeat flow
 
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+
+i = 1
 for elem in lambda_list:
-    print(elem[0], elem[1])
+    elem.to_excel(f"binary_test{i}.xlsx", index=True)
+    i += 1
+
+master_problem_test.get_deploy_bin_type_variables_df().to_excel(f"binary_type_test{i}.xlsx", index=True)

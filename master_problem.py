@@ -30,6 +30,10 @@ class MasterProblem:
         self.columns = self.add_first_column(initial_column)
 
 
+    """
+    ADDING COLUMNs FROM SUB-PROBLEM FUNCTIONS
+    """
+
     def add_first_column(self, column):
         """
         Takes in a dataframe containing the results from solving the subproblems. The function then re-indexes the dataframe by adding an interation counter k as the outer index.
@@ -65,6 +69,43 @@ class MasterProblem:
         #Renaming the index, so it also applies to the newly added column
         self.columns.index.names = self.column_df_index_names
 
+
+    """
+    FUNCTIONS FOR RUNNING THE MODEL
+    """
+
+    def run_and_solve_master_problem(self):
+        """
+        Runs the optimization problem and prints the solution to the terminal
+        :return:
+        """
+        #Declare model
+        self.model = gp.Model(f"Master Problem {self.iterations_k}")
+
+        #Set sets and declare variables
+        self.set_sets()
+        self.declare_variables()
+
+        #Set objective
+        self.set_objective()
+
+        #Add constraints to the mode
+        self.add_convexity_constraint()
+        self.add_MAB_constraint()
+        self.add_binary_variable_tracking_constraints()
+
+        #Solve model
+        self.model.optimize()
+
+        #Print solution
+        self.print_solution()
+
+        #Check if we have reached optimality for the LP relaxed problem
+        self.check_optimality()
+
+    """
+    SETTING SETS AND VARIABLES FUNCTIONS
+    """
     def set_sets(self):
         #Declaring sets for easier use in other functions.
         #Fetches the index from every level of index in the columns dataframe and stores all unique values in a list
@@ -75,10 +116,23 @@ class MasterProblem:
         self.periods_t = self.columns.index.get_level_values("Period").unique().tolist()
 
     def declare_variables(self):
+        #TODO: Implement consistency in indice order with subproblem and thesis
         #Declaring the decision variables for the model
         self.lambda_var = self.model.addVars(len(self.locations_l), len(self.iterations_k), vtype=GRB.CONTINUOUS, lb=0)
         self.penalty_var = self.model.addVars(len(self.locations_l))
 
+        #Declaring the binary tracking variables
+        self.deploy_bin = self.model.addVars(len(self.locations_l), len(self.periods_t), vtype=GRB.CONTINUOUS)
+        self.deploy_type_bin = self.model.addVars(len(self.locations_l), len(self.smolt_types_f), len(self.periods_t), vtype=GRB.CONTINUOUS)
+        self.harvest_bin = self.model.addVars(len(self.locations_l), len(self.periods_t), len(self.scenarios_s),vtype=GRB.CONTINUOUS)
+        """
+        
+        self.employ_bin = self.model.addVars(len(self.locations_l),len(self.periods_t), len(self.scenarios_s), vtype=GRB.BINARY)
+        """
+
+    """
+    SETTING OBJECTIVE AND ADDING CONSTRAINTS
+    """
     def set_objective(self):
         """
         Sets the objective function for the model - chapter 6.3 in Bjorlykke & Vassbotten
@@ -148,34 +202,48 @@ class MasterProblem:
                     , name=f"MAB Constr;{s},{t}"
                 )
 
-    def run_and_solve_master_problem(self):
-        """
-        Runs the optimization problem and prints the solution to the terminal
-        :return:
-        """
-        #Declare model
-        self.model = gp.Model(f"Master Problem {self.iterations_k}")
+    """
+    ADDING VARIABLE TRACKING CONSTRAINTS
+    """
 
-        #Set sets and declare variables
-        self.set_sets()
-        self.declare_variables()
+    def add_binary_variable_tracking_constraints(self):
+        self.add_deploy_bin_tracking_constraint()
+        self.add_deploy_type_bin_tracking_constraint()
 
-        #Set objective
-        self.set_objective()
+    def add_deploy_bin_tracking_constraint(self):
+        # TODO: Refactor to use the addconstrs function
+        for t in range(len(self.periods_t)):
+            for l in range(len(self.locations_l)):
+                self.model.addConstr(
+                    gp.quicksum(
+                        self.lambda_var[l, k] * self.columns.loc[(k, l, 0, 0, t, t)]["Deploy bin"] if (k, l, 0, 0, t, t) in self.columns.index else 0.0
+                        for k in range(len(self.iterations_k))
+                    ) == self.deploy_bin[l, t]
+                    , name=f"Deploy bin; {l},{t}"
+                )
 
-        #Add constraints to the mode
-        self.add_convexity_constraint()
-        self.add_MAB_constraint()
+    def add_deploy_type_bin_tracking_constraint(self):
+        #TODO: Refactor to use the addconstrs function
+        for f in range(len(self.smolt_types_f)):
+            for t in range(len(self.periods_t)):
+                for l in range(len(self.locations_l)):
+                    self.model.addConstr(
+                        gp.quicksum(
+                            self.lambda_var[l, k] * self.columns.loc[(k, l, 0, f, t, t)]["Deploy type bin"] if (k, l, 0, f, t, t) in self.columns.index else 0.0
+                            for k in range(len(self.iterations_k))
+                        ) == self.deploy_type_bin[l, f, t],
+                        name=f"Deploy type bin; {l},{f},{t}"
+                    )
 
-        #Solve model
-        self.model.optimize()
+    def add_harvest_bin_tracking_variable(self):
+        pass #TODO:Implement function
 
-        #Print solution
-        self.print_solution()
+    def add_employ_bin_tracking_variable(self):
+        pass#TODO:Implement function
 
-        #Check if we have reached optimality for the LP relaxed problem
-        self.check_optimality()
-
+    """
+    PRINTING AND GET FUNCTIONS
+    """
     def print_solution(self):
         """
         Prints the lambda variables to terminal, if the model is finished and optimal
@@ -187,7 +255,7 @@ class MasterProblem:
                 for l in self.locations_l:
                     print(f"Lambda [{l}, {k}]", self.lambda_var[l,k].X)
 
-    def get_results_df(self):
+    def get_lambda_df(self):
         """
         Exports the lambda variable values from a solution to a Dataframe - for easier use by other functions
         :return:
@@ -205,6 +273,41 @@ class MasterProblem:
 
         df = pd.DataFrame(lambda_list, columns=[k for k in self.iterations_k], index=[l for l in self.locations_l])
         df.index.names = ["Location"]
+        return df
+
+    def get_deploy_bin_variables_df(self):
+        binary_list = []
+        if self.model.status == GRB.OPTIMAL:
+            for l in self.locations_l:
+                location_list = []
+                for t in self.periods_t:
+                    location_list.append(self.deploy_bin[l, t].X)
+                binary_list.append(location_list)
+        else:
+            print("Model not optimal")
+            return None
+
+        df = pd.DataFrame(binary_list, columns=[t for t in self.periods_t], index=[l for l in self.locations_l])
+        df.index.names = ["Deploy variables"]
+        return df
+
+    def get_deploy_bin_type_variables_df(self):
+        binary_dfs_list = []
+        if self.model.status == GRB.OPTIMAL:
+            for l in self.locations_l:
+                location_list = []
+                for f in self.smolt_types_f:
+                    period_data = ([self.deploy_type_bin[l, f, t].X for t in self.periods_t])
+                    location_list.append(period_data)
+                location_df = pd.DataFrame(location_list, columns=[t for t in self.periods_t], index=[f for f in self.smolt_types_f])
+                binary_dfs_list.append(location_df)
+
+        else:
+            print("Model not optimal")
+            return None
+
+        df = pd.concat(binary_dfs_list, keys=[l for l in self.locations_l])
+
         return df
 
     def print_shadow_prices(self):
@@ -288,6 +391,10 @@ class MasterProblem:
 
             return df
 
+    """
+    CHECK OPTIMALITY FUNCTIONS
+    """
+
     def check_optimality(self):
         """
         Checks if the Dantzig-Wolfe decomposition has been solved to optimality.
@@ -302,13 +409,13 @@ class MasterProblem:
         #If it is None, we set the previous solution to be the current solution
         try:
             if self.previous_solution == None:
-                self.previous_solution = self.get_results_df()
+                self.previous_solution = self.get_lambda_df()
                 return None
         except:
             pass
 
         #Fetces the current solution using the get_results_df method. Which returns a df with the lambda variables in the current iteration
-        new_solution = self.get_results_df()
+        new_solution = self.get_lambda_df()
 
         #The new solution will, since this function is run once every iteration, have one more column than the previous solution
         #Common columns returns the columns that the dataframes have in common

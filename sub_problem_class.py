@@ -352,8 +352,10 @@ class SubProblem:
                         w_entry = self.w[f, deploy_period, t, s].x
                         employ_entry = self.employ_bin[t,s].x
                         harvest_entry = self.harvest_bin[t,s].x
-                        l3_data_storage.append([x_entry,w_entry,employ_entry, harvest_entry])
-                    columns = ["X", "W", "EB", "HB"]
+                        deploy_entry = self.deploy_bin[t].x
+                        deploy_type_entry = self.deploy_type_bin[f,t].x
+                        l3_data_storage.append([x_entry,w_entry,employ_entry, harvest_entry, deploy_entry, deploy_type_entry])
+                    columns = ["X", "W", "Employ bin", "Harvest bin", "Deploy bin", "Deploy type bin"]
                     index = [i + deploy_period for i in range(len(l3_data_storage))]
                     l2_df_storage.append(pd.DataFrame(l3_data_storage, columns=columns, index=index))
                 keys_l2 = [i for i in deploy_period_list]
