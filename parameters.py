@@ -28,3 +28,4 @@ class GlobalParameters:
         pass
 
 
+global_parameters = GlobalParameters()

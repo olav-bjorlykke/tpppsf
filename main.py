@@ -17,9 +17,6 @@ site_test_1 = Site(
     init_biomass=1500 * 1000,
     init_avg_weight=2000,
     init_biomass_months_deployed=11,
-    TGC_array=input_test.TGC_df.iloc[0],
-    smolt_weights=[150, 200, 250],
-    weight_req_for_harvest = 3000.0,
     site_name="Senja"
 )
 
@@ -29,19 +26,12 @@ site_test_2 = Site(
     init_biomass=400 * 1000,
     init_avg_weight=850,
     init_biomass_months_deployed=5,
-    TGC_array=input_test.TGC_df.iloc[0],
-    smolt_weights=[150, 200, 250],
-    weight_req_for_harvest=3000.0,
     site_name="Nord-Troms"
 )
 
 site_test_3 = Site(
     scenario_temperatures=scenarios_test.scenario_temperatures_per_site_df.loc["Vesteralen"],
     MAB_capacity=3500 * 1000,
-    init_biomass=0,
-    TGC_array=input_test.TGC_df.iloc[0],
-    smolt_weights=[150, 200, 250],
-    weight_req_for_harvest=3000.0,
     site_name="Vesteralen"
 )
 
