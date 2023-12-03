@@ -37,24 +37,15 @@ site_test_3 = Site(
 
 
 sub_problem_test_1 = SubProblem(
-    input_data_obj=input_test,
-    parameters_obj= GlobalParameters(),
-    scenarios_obj=scenarios_test,
     site_obj=site_test_1
 )
 
 
 sub_problem_test_2 = SubProblem(
-    input_data_obj=input_test,
-    parameters_obj=GlobalParameters(),
-    scenarios_obj=scenarios_test,
     site_obj=site_test_2
 )
 
 sub_problem_test_3 = SubProblem(
-    input_data_obj=input_test,
-    parameters_obj=GlobalParameters(),
-    scenarios_obj=scenarios_test,
     site_obj=site_test_3
 )
 

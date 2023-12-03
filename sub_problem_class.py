@@ -11,16 +11,13 @@ import matplotlib.pyplot as plt
 class SubProblem:
     iterations = 0
     def __init__(self,
-                 input_data_obj,
-                 parameters_obj,
-                 scenarios_obj,
                  site_obj,
                  MAB_shadow_prices_df = pd.DataFrame()
                  ):
         #Imported classes, containing parameters and data
-        self.input_data = input_data_obj
-        self.parameters = parameters_obj
-        self.scenario = scenarios_obj
+        self.input_data = InputData()
+        self.parameters = GlobalParameters()
+        self.scenario = Scenarios(self.input_data.temperatures_df)
         self.site = site_obj
 
         #Setting variables to contain the size of sets
