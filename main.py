@@ -65,8 +65,6 @@ df_3 = sub_problem_test_3.get_second_stage_variables_df()
 df = pd.concat([df_1, df_2, df_3], keys=[i for i in range(len([df_1, df_2, df_3]))])
 
 master_problem_test = MasterProblem(
-    parameters=GlobalParameters(),
-    scenarios=scenarios_test,
     initial_column=df
 )
 

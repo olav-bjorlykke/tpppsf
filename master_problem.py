@@ -2,6 +2,9 @@ import gurobipy as gp
 from gurobipy import GRB
 import pandas as pd
 import numpy as np
+from parameters import GlobalParameters
+from input_data import InputData
+from scenarios import Scenarios
 
 
 class MasterProblem:
@@ -20,13 +23,14 @@ class MasterProblem:
 
 
     def __init__(self,
-                 parameters,
-                 scenarios,
                  initial_column
                  ):
         #Declaring objects containing data needed to run the master problem
-        self.parameters = parameters
-        self.scenarios = scenarios
+        self.parameters = GlobalParameters()
+        self.input = InputData()
+        self.scenarios = Scenarios(self.input.temperatures_df)
+
+
         self.columns = self.add_first_column(initial_column)
 
 
@@ -194,7 +198,7 @@ class MasterProblem:
                         for l in self.locations_l
                         for k in self.iterations_k
                     )
-                    <= 2300*1000*3 #TODO: set the actual limit for MAB across the sites as the limit
+                    <= self.parameters.MAB_company_limit #TODO: set the actual limit for MAB across the sites as the limit
 
                     #Naming the constraint by the pattern "{Constraint type}; {indice}, {indice}" enabling transformation identification and sorting of shadow prices
                     , name=f"MAB Constr;{s},{t}"
@@ -489,6 +493,14 @@ class MasterProblem:
 
         #Sets current solution to be previous solution
         self.previous_solution = new_solution
+
+
+    """
+    Functions for finding branching variables
+    """
+
+    def find_deploy_branching_variable(self):
+        pass
 
 
 
