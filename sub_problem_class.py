@@ -32,7 +32,7 @@ class SubProblem:
         self.site = site_obj
         self.MAB_shadow_prices_df = MAB_shadow_prices_df
 
-    def solve_and_print_model(self):
+    def solve_initial_model(self):
         self.model = gp.Model(f"Single site solution {self.site.name}")
 
         #Declaing variables
@@ -60,6 +60,16 @@ class SubProblem:
         self.iterations += 1
 
         #Putting solution into variables for export
+
+    def solve_model(self):
+        """
+        Used for solving a model without declaring it anew
+        :return:
+        """
+        self.model.optimize()
+        self.print_solution_to_excel()
+        self.plot_solutions_x_values()
+        self.iterations += 1
 
     def declare_variables(self):
         self.x = self.model.addVars(self.f_size, self.t_size, self.t_size, self.s_size, vtype=GRB.CONTINUOUS, lb=0)
@@ -255,6 +265,23 @@ class SubProblem:
             for t in range(min(t_hat + self.parameters.max_periods_deployed, self.t_size), self.t_size)
             for s in range(self.s_size)
         )
+
+    def add_up_branching_constraint(self, indice):
+        self.model.addConstr(
+            self.deploy_bin[indice] == 1,
+            name="Branching Constraint"
+        )
+
+    def add_down_branching_constraint(self, indice):
+        self.model.addConstr(
+            self.deploy_bin[indice] == 0,
+            name="Branching Constraint"
+        )
+
+
+    """
+    PLOTTING AND GET FUNCTIONS
+    """
 
     def print_solution_to_excel(self):
         data_list = []

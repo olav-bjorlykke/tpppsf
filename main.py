@@ -52,9 +52,9 @@ sub_problem_test_3 = SubProblem(
 sub_problems = [sub_problem_test_1, sub_problem_test_2, sub_problem_test_3]
 
 # Solving the sub problems
-sub_problem_test_1.solve_and_print_model()
-sub_problem_test_2.solve_and_print_model()
-sub_problem_test_3.solve_and_print_model()
+sub_problem_test_1.solve_initial_model()
+sub_problem_test_2.solve_initial_model()
+sub_problem_test_3.solve_initial_model()
 
 # Setting column dataframes
 df_1 = sub_problem_test_1.get_second_stage_variables_df()
@@ -74,9 +74,9 @@ lambda_list = []
 
 for i in range(8):
     #Solving the sub problems
-    sub_problem_test_1.solve_and_print_model()
-    sub_problem_test_2.solve_and_print_model()
-    sub_problem_test_3.solve_and_print_model()
+    sub_problem_test_1.solve_initial_model()
+    sub_problem_test_2.solve_initial_model()
+    sub_problem_test_3.solve_initial_model()
 
     #Setting column dataframes
     df_1 = sub_problem_test_1.get_second_stage_variables_df()

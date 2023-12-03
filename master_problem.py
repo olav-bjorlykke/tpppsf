@@ -17,6 +17,7 @@ class MasterProblem:
     lambdas = None
     previous_solution = None
     is_model_solved = False
+    branched_variables = [[0,0]]
 
     #Variable containing the name of all columns in the columns dataframe. Set here to avoid naming errors
     column_df_index_names = ["Iteration", "Location", "Scenario", "Smolt type", "Deploy period", "Period"]
@@ -159,7 +160,7 @@ class MasterProblem:
              )
              -
              #Adds a penalty variable. This variable ensures feasibility when the iteration count is low. However the penalty is set to be so high as to it never being used in a real solution.
-             gp.quicksum(self.penalty_var[l] * 10000000 for l in self.locations_l)
+             gp.quicksum(self.penalty_var[l] * 1000000000000000000 for l in self.locations_l)
             ,sense=GRB.MAXIMIZE
         )
 
@@ -286,6 +287,21 @@ class MasterProblem:
                                 )
                             else:
                                 pass
+
+    """
+    Adding branching constraints
+    """
+    def add_up_branching_constraint(self, indice):
+        self.model.addConstr(
+            self.deploy_bin[indice[0], indice[1]] == 1
+            ,name=f"Branching constraint : {indice}"
+        )
+
+    def add_down_branching_constraint(self, indice):
+        self.model.addConstr(
+            self.deploy_bin[indice[0], indice[1]] == 1
+            , name=f"Branching constraint : {indice}"
+        )
 
     """
     PRINTING AND GET FUNCTIONS
@@ -500,7 +516,25 @@ class MasterProblem:
     """
 
     def find_deploy_branching_variable(self):
-        pass
+        deploy_vars_df = self.get_deploy_bin_variables_df()
+
+        for elem in self.branched_variables:
+            deploy_vars_df.loc[(elem[0])][elem[1]] = 0
+
+        stacked_df = deploy_vars_df.stack()
+        closest_to_1_index = (stacked_df -1).abs().idxmin()
+
+
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+
+        print(closest_to_1_index)
+        print(closest_to_1_index[0], closest_to_1_index[1])
+        print(deploy_vars_df)
+
+        self.branched_variables.append(closest_to_1_index)
+
+        return closest_to_1_index
 
 
 

@@ -21,7 +21,7 @@ Sites
 site_1 = Site(
     scenario_temperatures=scenarios_test.scenario_temperatures_per_site_df.loc[area_vesteralen_string],
     MAB_capacity=3120 * 1000,
-    init_biomass=1500 * 1000,
+    init_biomass=1000 * 1000,
     init_avg_weight=2000,
     init_biomass_months_deployed=11,
     site_name="INNERBROKLØYSA"
@@ -111,7 +111,7 @@ sites_list = [site_1, site_2, site_3, site_4, site_5, site_6,
               site_7, site_8, site_9, site_10, site_11, site_12,
               site_13, site_14, site_15, site_16]
 
-short_sites_list = [site_1, site_12, site_16, site_4]
+short_sites_list = [site_1, site_12, site_16]
 
 
 sub_problem_list = [SubProblem(site_obj=site) for site in sites_list]
