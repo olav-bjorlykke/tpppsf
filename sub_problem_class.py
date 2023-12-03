@@ -209,7 +209,6 @@ class SubProblem:
         self.model.addConstrs(  # This is the constraint (5.11) - Which tracks the biomass employed in the harvest period
             self.x[f, t_hat, t + 1, s] == (1 - self.parameters.expected_production_loss) * self.x[f, t_hat, t, s] *
             self.growth_factors.loc[(self.smolt_weights[f], f"Scenario {s}", t_hat)][t] - self.w[f, t_hat, t, s]
-            # TODO:Introduce scenario and period specific G
             for t_hat in range(self.t_size - 1)
             for f in range(self.f_size)
             for s in range(self.s_size)

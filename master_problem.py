@@ -124,11 +124,9 @@ class MasterProblem:
         #Declaring the binary tracking variables
         self.deploy_bin = self.model.addVars(len(self.locations_l), len(self.periods_t), vtype=GRB.CONTINUOUS)
         self.deploy_type_bin = self.model.addVars(len(self.locations_l), len(self.smolt_types_f), len(self.periods_t), vtype=GRB.CONTINUOUS)
-        self.harvest_bin = self.model.addVars(len(self.locations_l), len(self.periods_t), len(self.scenarios_s),vtype=GRB.CONTINUOUS)
-        """
-        
-        self.employ_bin = self.model.addVars(len(self.locations_l),len(self.periods_t), len(self.scenarios_s), vtype=GRB.BINARY)
-        """
+        self.harvest_bin = self.model.addVars(len(self.locations_l), len(self.smolt_types_f), len(self.periods_t), len(self.periods_t), len(self.scenarios_s),vtype=GRB.CONTINUOUS)
+        self.employ_bin = self.model.addVars(len(self.locations_l), len(self.smolt_types_f), len(self.periods_t), len(self.periods_t), len(self.scenarios_s),vtype=GRB.CONTINUOUS)
+
 
     """
     SETTING OBJECTIVE AND ADDING CONSTRAINTS
@@ -209,6 +207,8 @@ class MasterProblem:
     def add_binary_variable_tracking_constraints(self):
         self.add_deploy_bin_tracking_constraint()
         self.add_deploy_type_bin_tracking_constraint()
+        self.add_harvest_bin_tracking_variable()
+        self.add_employ_bin_tracking_variable()
 
     def add_deploy_bin_tracking_constraint(self):
         # TODO: Refactor to use the addconstrs function
@@ -236,10 +236,52 @@ class MasterProblem:
                     )
 
     def add_harvest_bin_tracking_variable(self):
-        pass #TODO:Implement function
+        #TODO: This constraint might be the cause of numerical instability. Try to implement in another
+        #Iterating through all indices
+        for f in self.smolt_types_f:
+            for l in self.locations_l:
+                for t in self.periods_t:
+                    for s in self.scenarios_s:
+                        #Using the slice variable to fetch all possible t_hats, without having to specify the k variable
+                        for t_hat in self.columns.loc[(slice(None), l, s, f)].index.get_level_values("Deploy period").unique().tolist():
+                            #Checks if the index we are at exists in the Columns dataframe for any value of the iterations k
+                            if any([(k, l, s, f, t_hat, t) in self.columns.index for k in self.iterations_k]):
+                                #Add constraint to the model
+                                 self.model.addConstr(
+                                    gp.quicksum(
+                                        self.lambda_var[l, k] * self.columns.loc[(k, l, s, f, t_hat, t)]["Harvest bin"] if (k, l, s, f, t_hat, t) in self.columns.index else 0.0
+                                        for k in self.iterations_k
+                                    ) ==
+                                     self.harvest_bin[l,f,t_hat,t,s]
+                                    , name = f"Harvest bin; {l}, {s}, {f}, {t_hat}, {t}"
+                                )
+                            else:
+                                pass
 
     def add_employ_bin_tracking_variable(self):
-        pass#TODO:Implement function
+        # TODO: This constraint might be the cause of numerical instability. Try to implement a better more readable version
+        # Iterating through all indices
+        for f in self.smolt_types_f:
+            for l in self.locations_l:
+                for t in self.periods_t:
+                    for s in self.scenarios_s:
+                        # Using the slice variable to fetch all possible t_hats, without having to specify the k variable
+                        for t_hat in self.columns.loc[(slice(None), l, s, f)].index.get_level_values(
+                                "Deploy period").unique().tolist():
+                            # Checks if the index we are at exists in the Columns dataframe for any value of the iterations k
+                            if any([(k, l, s, f, t_hat, t) in self.columns.index for k in self.iterations_k]):
+                                # Add constraint to the model
+                                self.model.addConstr(
+                                    gp.quicksum(
+                                        self.lambda_var[l, k] * self.columns.loc[(k, l, s, f, t_hat, t)][
+                                            "Employ bin"] if (k, l, s, f, t_hat, t) in self.columns.index else 0.0
+                                        for k in self.iterations_k
+                                    ) ==
+                                    self.employ_bin[l, f, t_hat, t, s]
+                                    , name=f"Employ bin; {l}, {s}, {f}, {t_hat}, {t}"
+                                )
+                            else:
+                                pass
 
     """
     PRINTING AND GET FUNCTIONS
@@ -276,39 +318,59 @@ class MasterProblem:
         return df
 
     def get_deploy_bin_variables_df(self):
+        #Creating a two-dimensional list to store the values from every location
         binary_list = []
+        #Checking if model is solved to optimality, if not there will not be any meaningfull results to extract
         if self.model.status == GRB.OPTIMAL:
+            #Iterate throught every location
             for l in self.locations_l:
-                location_list = []
-                for t in self.periods_t:
-                    location_list.append(self.deploy_bin[l, t].X)
+                #Creating a list of the binary variables for the given location
+                location_list = [self.deploy_bin[l, t].X for t in self.periods_t]
+                #Appending the list to the list of all locations
                 binary_list.append(location_list)
         else:
             print("Model not optimal")
             return None
 
+        #Turning the data into a dataframe for easier reference
         df = pd.DataFrame(binary_list, columns=[t for t in self.periods_t], index=[l for l in self.locations_l])
-        df.index.names = ["Deploy variables"]
+        #Setting the index names
+        df.index.names = ["Locations"]
         return df
 
     def get_deploy_bin_type_variables_df(self):
-        binary_dfs_list = []
+        #Creating a list for storing the location specific Dataframes
+        binary_df_list = []
+
+        #Check if model is optimale
         if self.model.status == GRB.OPTIMAL:
+            #Iterating through all locations
             for l in self.locations_l:
+                #Creating a list to store all the binary variables from one locations
                 location_list = []
+                #Iterating through every smolt type
                 for f in self.smolt_types_f:
+                    #Creating a list containing the binary deploy variable value from each period for the given smolt type
                     period_data = ([self.deploy_type_bin[l, f, t].X for t in self.periods_t])
+                    #Append the list to the location list
                     location_list.append(period_data)
+                #Create a Dataframe containing the data for all smolt types in that location
                 location_df = pd.DataFrame(location_list, columns=[t for t in self.periods_t], index=[f for f in self.smolt_types_f])
-                binary_dfs_list.append(location_df)
+                #Append the list to the list of dataframes
+                binary_df_list.append(location_df)
 
         else:
             print("Model not optimal")
             return None
 
-        df = pd.concat(binary_dfs_list, keys=[l for l in self.locations_l])
+        #Concatenate the dataframes into one list containing the data for every location
+        df = pd.concat(binary_df_list, keys=[l for l in self.locations_l])
+        #Setting the index names for easier reference
+        df.index.names = ["Locations", "Smolt type"]
 
         return df
+
+    #TODO:Add get functions for the tracker variables for employ bin and harvest bin
 
     def print_shadow_prices(self):
         """
@@ -364,17 +426,15 @@ class MasterProblem:
             indices = []
             # Iterates through all constraints
             for i, constraint in enumerate(self.model.getConstrs()):
-                #Fetches the constraint name from the constr object and split them into name and indices
-                #The constraint name string is structured like this:  "{Type name};{Indice 1}, {Indice 2}, ..."
-
-                #Fetching the constraint name
+                # Fetches the constraint name from the constr object and split them into name and indices
+                # The constraint name string is structured like this:  "{Type name};{Indice 1}, {Indice 2}, ..."
                 constraint_type = constraint.constrName.split(";")[0]
-                #Fetches the indices of the constraint
-                constraint_indices = constraint.constrName.split(";")[1].split(",")
-                #Transforms the indices from list of string elements into a list of int elements
-                constraint_indices = [int(elem) for elem in constraint_indices]
-                # Ensures that we only export the shadow prices for the constraints of the correct type
                 if constraint_type == "MAB Constr":
+                    #Fetches the indices of the constraint
+                    constraint_indices = constraint.constrName.split(";")[1].split(",")
+                    #Transforms the indices from list of string elements into a list of int elements
+                    constraint_indices = [int(elem) for elem in constraint_indices]
+                    # Ensures that we only export the shadow prices for the constraints of the correct type
                     #Appends the indices and the shadow prices to the storage lists
                     indices.append((constraint_indices[0], constraint_indices[1]))
                     shadow_prices_list.append(shadow_prices[i])
@@ -429,9 +489,6 @@ class MasterProblem:
 
         #Sets current solution to be previous solution
         self.previous_solution = new_solution
-
-    #TODO: Add tracker constraints for the dual variables
-    #TODO: If optimale choose one variable to branch on
 
 
 

@@ -93,7 +93,7 @@ shadow_prices = None
 lambda_list = []
 
 
-for i in range(2):
+for i in range(8):
     #Solving the sub problems
     sub_problem_test_1.solve_and_print_model()
     sub_problem_test_2.solve_and_print_model()
