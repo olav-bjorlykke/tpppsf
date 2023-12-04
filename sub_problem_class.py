@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 
 class SubProblem:
     iterations = 0
+    branching_variable_indices_up = []
+
     def __init__(self,
                  site_obj,
                  MAB_shadow_prices_df = pd.DataFrame()

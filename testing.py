@@ -24,3 +24,13 @@ node = Node(
 )
 
 node.solve_node_to_optimality()
+
+node.set_up_branching_constraint()
+
+print("#######################\n",
+"#######################\n",
+"#######################\n",
+"#######################\n"
+      )
+
+node.solve_node_to_optimality()

@@ -17,8 +17,8 @@ class MasterProblem:
     lambdas = None
     previous_solution = None
     is_model_solved = False
-    branched_variables_up = [[0,0]]
-    branched_variables_down = []
+    branched_variable_indices_up = [[0, 0]]
+    branched_variable_indices_down = []
 
     #Variable containing the name of all columns in the columns dataframe. Set here to avoid naming errors
     column_df_index_names = ["Iteration", "Location", "Scenario", "Smolt type", "Deploy period", "Period"]
@@ -99,6 +99,13 @@ class MasterProblem:
         self.add_convexity_constraint()
         self.add_MAB_constraint()
         self.add_binary_variable_tracking_constraints()
+
+        #Add branching constraints to the model
+        for indice in self.branched_variable_indices_up:
+            self.add_up_branching_constraint(indice)
+
+        for indice in self.branched_variable_indices_down:
+            self.add_down_branching_constraint(indice)
 
         #Solve model
         self.model.optimize()
@@ -531,10 +538,10 @@ class MasterProblem:
     def find_deploy_branching_variable(self):
         deploy_vars_df = self.get_deploy_bin_variables_df()
 
-        for elem in self.branched_variables_up:
+        for elem in self.branched_variable_indices_up:
             deploy_vars_df.loc[(elem[0])][elem[1]] = 0
 
-        for elem in self.branched_variables_down:
+        for elem in self.branched_variable_indices_down:
             deploy_vars_df.loc[(elem[0])][elem[1]] = 0
 
         stacked_df = deploy_vars_df.stack()

@@ -49,6 +49,7 @@ class Node:
         return new_column_df
 
     def solve_node_to_optimality(self):
+        self.master_problem.is_model_solved = False
         i=1
         while not self.master_problem.is_model_solved:
             self.solve_sub_problems()
@@ -68,9 +69,11 @@ class Node:
         print("Self branching variable",self.branching_variable_index)
 
     def set_down_branching_constraint(self):
-        pass
+        self.master_problem.branched_variable_indices_down.append(self.branching_variable_index)
+        self.sub_problems[self.branching_variable_index[0]]
+
     def set_up_branching_constraint(self):
-        pass
+        self.master_problem.branched_variable_indices_up.append(self.branching_variable_index)
 
     def run_branch_and_price(self):
         pass
