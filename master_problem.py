@@ -17,6 +17,7 @@ class MasterProblem:
     lambdas = None
     previous_solution = None
     is_model_solved = False
+    branched_variables = []
 
     #Variable containing the name of all columns in the columns dataframe. Set here to avoid naming errors
     column_df_index_names = ["Iteration", "Location", "Scenario", "Smolt type", "Deploy period", "Period"]
@@ -502,6 +503,26 @@ class MasterProblem:
     def find_deploy_branching_variable(self):
         pass
 
+    def find_deploy_branching_variable(self):
+        deploy_vars_df = self.get_deploy_bin_variables_df()
+
+        for elem in self.branched_variables:
+            deploy_vars_df.loc[(elem[0])][elem[1]] = 0
+
+        stacked_df = deploy_vars_df.stack()
+        closest_to_1_index = (stacked_df -1).abs().idxmin()
+
+
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+
+        print(closest_to_1_index)
+        print(closest_to_1_index[0], closest_to_1_index[1])
+        print(deploy_vars_df)
+
+        self.branched_variables.append(closest_to_1_index)
+
+        return closest_to_1_index
 
 
 
