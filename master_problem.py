@@ -159,7 +159,7 @@ class MasterProblem:
              )
              -
              #Adds a penalty variable. This variable ensures feasibility when the iteration count is low. However the penalty is set to be so high as to it never being used in a real solution.
-             gp.quicksum(self.penalty_var[l] * 10000000 for l in self.locations_l)
+             gp.quicksum(self.penalty_var[l] * 1000000000000000000000 for l in self.locations_l)
             ,sense=GRB.MAXIMIZE
         )
 
