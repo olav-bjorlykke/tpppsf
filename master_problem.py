@@ -13,12 +13,7 @@ class MasterProblem:
     locations_l = None
     scenarios_s = None
     smolt_types_f = None
-    periods_t = None
-    lambdas = None
-    previous_solution = None
-    is_model_solved = False
-    branched_variable_indices_up = [[0, 0]]
-    branched_variable_indices_down = []
+
 
     #Variable containing the name of all columns in the columns dataframe. Set here to avoid naming errors
     column_df_index_names = ["Iteration", "Location", "Scenario", "Smolt type", "Deploy period", "Period"]
@@ -31,9 +26,15 @@ class MasterProblem:
         self.parameters = GlobalParameters()
         self.input = InputData()
         self.scenarios = Scenarios(self.input.temperatures_df)
-
-
         self.columns = self.add_first_column(initial_column)
+
+        #Setting some class attributes
+        self.periods_t = None
+        self.lambdas = None
+        self.previous_solution = None
+        self.is_model_solved = False
+        self.branched_variable_indices_up = [[0, 0]] #TODO: Implement a method that gets this from sites with initial biomass
+        self.branched_variable_indices_down = []
 
 
     """
@@ -514,21 +515,23 @@ class MasterProblem:
         except:
             pass
 
-        #Fetces the current solution using the get_results_df method. Which returns a df with the lambda variables in the current iteration
-        new_solution = self.get_lambda_df()
+        if self.model.status == GRB.OPTIMAL():
+            #Fetces the current solution using the get_results_df method. Which returns a df with the lambda variables in the current iteration
+            new_solution = self.get_lambda_df()
 
-        #The new solution will, since this function is run once every iteration, have one more column than the previous solution
-        #Common columns returns the columns that the dataframes have in common
-        common_columns = self.previous_solution.columns.intersection(new_solution.columns)
+            #The new solution will, since this function is run once every iteration, have one more column than the previous solution
+            #Common columns returns the columns that the dataframes have in common
+            common_columns = self.previous_solution.columns.intersection(new_solution.columns)
 
-        #Checks if all elements in the columns the dataframe have in common are the same within a tolerance.
-        is_the_same_within_tolerance = np.allclose(new_solution[common_columns], self.previous_solution[common_columns], rtol=0.01)
-        if is_the_same_within_tolerance:
-            #If te dataframes are the same -> We have reachec optimality -> Set is_model_solved variable to be true.
-            self.is_model_solved = True
+            #Checks if all elements in the columns the dataframe have in common are the same within a tolerance.
+            is_the_same_within_tolerance = np.allclose(new_solution[common_columns], self.previous_solution[common_columns], rtol=0.01)
+            if is_the_same_within_tolerance:
+                #If te dataframes are the same -> We have reachec optimality -> Set is_model_solved variable to be true.
+                self.is_model_solved = True
 
-        #Sets current solution to be previous solution
-        self.previous_solution = new_solution
+            #Sets current solution to be previous solution
+            self.previous_solution = new_solution
+
 
 
     """

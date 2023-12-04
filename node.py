@@ -8,9 +8,7 @@ class Node:
     This is a class for orchestrating the interplay between the master and the sub-problem,
     running the Branch and Price framework for solving the Dantzig-Wolfe decomposition with column generation
     """
-    sub_problems = []
-    master_problem = None
-    branching_variable_index = None
+
 
 
     def __init__(self,
@@ -18,6 +16,7 @@ class Node:
                  ):
         self.sub_problems = subproblems
         self.master_problem = MasterProblem(self.generate_initial_columns())
+        self.branching_variable_index = None
 
 
 
@@ -70,13 +69,11 @@ class Node:
 
     def set_down_branching_constraint(self):
         self.master_problem.branched_variable_indices_down.append(self.branching_variable_index)
-        self.sub_problems[self.branching_variable_index[0]]
+        self.sub_problems[self.branching_variable_index[0]].branching_variable_indices_up.append(self.branching_variable_index[1])
 
     def set_up_branching_constraint(self):
         self.master_problem.branched_variable_indices_up.append(self.branching_variable_index)
-
-    def run_branch_and_price(self):
-        pass
+        self.sub_problems[self.branching_variable_index[0]].branching_variable_indices_up.append(self.branching_variable_index[1])
 
 
 

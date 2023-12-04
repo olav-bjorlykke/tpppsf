@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 class SubProblem:
     iterations = 0
-    branching_variable_indices_up = []
+
 
     def __init__(self,
                  site_obj,
@@ -34,6 +34,12 @@ class SubProblem:
         self.site = site_obj
         self.MAB_shadow_prices_df = MAB_shadow_prices_df
 
+        #Defining some instance attributes:
+        self.iterations = 0
+        self.branching_variable_indices_up = []
+        self.branching_variable_indices_down = []
+
+
     def solve_and_print_model(self):
         self.model = gp.Model(f"Single site solution {self.site.name}")
 
@@ -52,6 +58,8 @@ class SubProblem:
         self.add_MAB_requirement_constraint()
         self.add_initial_condition_constraint()
         self.add_forcing_constraints()
+        self.add_up_branching_constraints()
+        self.add_down_branching_constraints()
 
         #Running gurobi to optimize model
         self.model.optimize()
@@ -258,6 +266,21 @@ class SubProblem:
             for t in range(min(t_hat + self.parameters.max_periods_deployed, self.t_size), self.t_size)
             for s in range(self.s_size)
         )
+
+    def add_up_branching_constraints(self):
+        for indice in self.branching_variable_indices_up:
+            self.model.addConstr(
+                self.deploy_bin[indice] == 1,
+                name = "Branching constraint"
+            )
+
+
+    def add_down_branching_constraints(self):
+        for indice in self.branching_variable_indices_down:
+            self.model.addConstr(
+                self.deploy_bin[indice] == 0,
+                name = "Branching constraint"
+            )
 
     def print_solution_to_excel(self):
         data_list = []

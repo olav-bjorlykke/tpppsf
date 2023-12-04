@@ -33,4 +33,37 @@ print("#######################\n",
 "#######################\n"
       )
 
+for subproblem in node.sub_problems:
+    print(subproblem.branching_variable_indices_up)
+
+print(node.master_problem.branched_variable_indices_up)
+
 node.solve_node_to_optimality()
+
+node.set_up_branching_constraint()
+
+print("#######################\n",
+"#######################\n",
+"#######################\n",
+"#######################\n"
+      )
+
+for subproblem in node.sub_problems:
+    print(subproblem.branching_variable_indices_up)
+
+print(node.master_problem.branched_variable_indices_up)
+
+node.solve_node_to_optimality()
+
+node.set_up_branching_constraint()
+
+print("#######################\n",
+"#######################\n",
+"#######################\n",
+"#######################\n"
+      )
+
+for subproblem in node.sub_problems:
+    print(subproblem.branching_variable_indices_up)
+
+print(node.master_problem.branched_variable_indices_up)
