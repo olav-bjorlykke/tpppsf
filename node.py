@@ -10,6 +10,7 @@ class Node:
     """
     sub_problems = []
     master_problem = None
+    branching_variable_index = None
 
 
     def __init__(self,
@@ -47,7 +48,7 @@ class Node:
         new_column_df = pd.concat(new_column, keys=[i for i in range(len(new_column))])
         return new_column_df
 
-    def run_one_node_in_branch_and_price(self):
+    def solve_node_to_optimality(self):
         i=1
         while not self.master_problem.is_model_solved:
             self.solve_sub_problems()
@@ -63,10 +64,13 @@ class Node:
             print(f"Iteration {i}")
             i += 1
 
-        self.master_problem.get_lambda_df().to_excel("orchestration_result.xlsx")
+        self.branching_variable_index = self.master_problem.find_deploy_branching_variable()
+        print("Self branching variable",self.branching_variable_index)
 
-
-
+    def set_down_branching_constraint(self):
+        pass
+    def set_up_branching_constraint(self):
+        pass
 
     def run_branch_and_price(self):
         pass

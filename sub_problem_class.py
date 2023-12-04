@@ -55,9 +55,10 @@ class SubProblem:
         self.model.optimize()
 
         #Printing solution
-        self.print_solution_to_excel()
-        self.plot_solutions_x_values()
-        self.iterations += 1
+        if self.model.status == GRB.OPTIMAL:
+            self.print_solution_to_excel()
+            self.plot_solutions_x_values()
+            self.iterations += 1
 
         #Putting solution into variables for export
 
@@ -334,6 +335,9 @@ class SubProblem:
         It iterates through all non-zero variables and writes the variables for X, W, Employ_bin and Harvest_bin to a ginormous dataframe
         Please don't touch it
         """
+        if self.model.status != GRB.OPTIMAL:
+            return pd.DataFrame
+
         deploy_period_list = self.get_deploy_period_list()
 
         df_storage = []

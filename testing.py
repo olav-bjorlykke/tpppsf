@@ -23,4 +23,4 @@ node = Node(
     subproblems=subproblem_list.short_sub_problem_list
 )
 
-node.run_one_node_in_branch_and_price()
+node.solve_node_to_optimality()
