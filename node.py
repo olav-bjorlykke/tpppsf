@@ -75,6 +75,15 @@ class Node:
         self.master_problem.branched_variable_indices_up.append(self.branching_variable_index)
         self.sub_problems[self.branching_variable_index[0]].branching_variable_indices_up.append(self.branching_variable_index[1])
 
+    def perform_up_branching(self):
+        self.set_up_branching_constraint()
+        self.master_problem.is_model_solved = False
+        self.branching_variable_index = None
+
+    def preform_down_branching(self):
+        self.set_down_branching_constraint()
+        self.master_problem.is_model_solved = False
+        self.branching_variable_index = None
 
 
 

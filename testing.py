@@ -11,13 +11,6 @@ from node import Node
 import subproblem_list
 
 
-"""
-orchestration = Orchestration(
-    subproblems=subproblem_list.sub_problem_list
-)
-
-orchestration.run_one_node_in_branch_and_price()
-"""
 
 node = Node(
     subproblems=subproblem_list.short_sub_problem_list

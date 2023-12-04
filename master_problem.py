@@ -9,10 +9,7 @@ from scenarios import Scenarios
 
 class MasterProblem:
     #Sets
-    iterations_k = None
-    locations_l = None
-    scenarios_s = None
-    smolt_types_f = None
+
 
 
     #Variable containing the name of all columns in the columns dataframe. Set here to avoid naming errors
@@ -35,6 +32,10 @@ class MasterProblem:
         self.is_model_solved = False
         self.branched_variable_indices_up = [[0, 0]] #TODO: Implement a method that gets this from sites with initial biomass
         self.branched_variable_indices_down = []
+        self.iterations_k = None
+        self.locations_l = None
+        self.scenarios_s = None
+        self.smolt_types_f = None
 
 
     """
@@ -515,7 +516,7 @@ class MasterProblem:
         except:
             pass
 
-        if self.model.status == GRB.OPTIMAL():
+        if self.model.status == GRB.OPTIMAL:
             #Fetces the current solution using the get_results_df method. Which returns a df with the lambda variables in the current iteration
             new_solution = self.get_lambda_df()
 
