@@ -299,6 +299,23 @@ class MasterProblem:
                             else:
                                 pass
 
+
+    """
+    Adding branching constraints
+    """
+    def add_up_branching_constraint(self, indice):
+        self.model.addConstr(
+            self.deploy_bin[indice[0], indice[1]] == 1
+            ,name=f"Branching constraint : {indice}"
+        )
+
+    def add_down_branching_constraint(self, indice):
+        self.model.addConstr(
+            self.deploy_bin[indice[0], indice[1]] == 1
+            , name=f"Branching constraint : {indice}"
+        )
+
+
     """
     PRINTING AND GET FUNCTIONS
     """
