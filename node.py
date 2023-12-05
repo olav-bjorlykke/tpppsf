@@ -99,6 +99,7 @@ class Node:
 
         self.master_problem.branched_variable_indices_up = node_label.up_list
         self.master_problem.branched_variable_indices_down = node_label.down_list
+        self.master_problem.iterations = 0 #Should allow 10 runs with warm start
 
         for i in range(len(self.sub_problems)):
             self.sub_problems[i].branching_variable_indices_up = []
