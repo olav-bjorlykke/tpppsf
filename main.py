@@ -17,12 +17,7 @@ orchestration = Orchestration(
 
 orchestration.run_branching_algorithm()
 
-for node_label in orchestration.explored_nodes:
-    print("ITERATION", node_label.iterations_number)
-    print("UP LIST",node_label.up_list)
-    print("DOWN LIST", node_label.down_list)
-    print("FEASIBLE SOLUTION", node_label.feasible_solution)
-    print("UPPER BOUND \n", node_label.lower_bound)
+orchestration.print_explored_node_to_file(orchestration.explored_nodes)
 
 
 

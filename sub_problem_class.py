@@ -66,8 +66,8 @@ class SubProblem:
 
         #Printing solution
         if self.model.status == GRB.OPTIMAL:
-            self.print_solution_to_excel()
-            self.plot_solutions_x_values()
+            #self.print_solution_to_excel()
+            #self.plot_solutions_x_values()
             self.iterations += 1
 
         #Putting solution into variables for export

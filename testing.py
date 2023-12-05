@@ -8,55 +8,33 @@ from sub_problem_class import SubProblem
 from master_problem import MasterProblem
 from orchestration_class import Orchestration
 from node import Node
+from orchestration_class import NodeLabel
 import subproblem_list
 
 
 
-node = Node(
+node_label_test_1 = NodeLabel(
+            iterations_number=1,
+            parent=1,
+            up_list= [[1,2]],
+            down_list=[[2,3],[4,2]],
+            lower_bound=1000.0,
+            feasible_solution=5500005.0
+)
+
+node_label_test_2 = NodeLabel(
+            iterations_number=2,
+            parent=1,
+            up_list= [[1,2]],
+            down_list=[[2,3],[4,2]],
+            lower_bound=1000.0,
+            feasible_solution=5500005.0
+)
+
+orchestration = Orchestration(
     subproblems=subproblem_list.short_sub_problem_list
 )
 
-node.solve_node_to_optimality()
+orchestration.print_explored_node_to_file([node_label_test_1, node_label_test_2])
 
-node.set_up_branching_constraint()
 
-print("#######################\n",
-"#######################\n",
-"#######################\n",
-"#######################\n"
-      )
-
-for subproblem in node.sub_problems:
-    print(subproblem.branching_variable_indices_up)
-
-print(node.master_problem.branched_variable_indices_up)
-
-node.solve_node_to_optimality()
-
-node.set_up_branching_constraint()
-
-print("#######################\n",
-"#######################\n",
-"#######################\n",
-"#######################\n"
-      )
-
-for subproblem in node.sub_problems:
-    print(subproblem.branching_variable_indices_up)
-
-print(node.master_problem.branched_variable_indices_up)
-
-node.solve_node_to_optimality()
-
-node.set_up_branching_constraint()
-
-print("#######################\n",
-"#######################\n",
-"#######################\n",
-"#######################\n"
-      )
-
-for subproblem in node.sub_problems:
-    print(subproblem.branching_variable_indices_up)
-
-print(node.master_problem.branched_variable_indices_up)
