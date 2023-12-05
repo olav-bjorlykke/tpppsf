@@ -15,22 +15,56 @@ class Orchestration:
                  subproblems,
                  ):
         self.sub_problems = subproblems
-        self.unexplored_nodes = [Node(subproblems)]
+        self.unexplored_nodes = []
         self.explored_nodes = []
         self.lower_bound = 0
         self.upper_bound = 1000000000000000 #TODO: this is supposed to represent infinity, find a more elegant way to achieve that
+        self.node_obj = Node(subproblems)
 
 
     def run_branching_algorithm(self):
+        init_node_label = NodeLabel(
+            iterations_number=0,
+            parent=None,
+            up_list=[[0,0]],
+            down_list = []
+        )
+
+        self.unexplored_nodes.append(init_node_label)
+        i = 0
+        #Solve Node in unexplored nodes
+        while self.unexplored_nodes:
+            current_node_label = self.unexplored_nodes.pop(0)
+            current_node_label.iterations_number = i
+
+            self.node_obj.reset_for_new_node(current_node_label)
+            continue_value = self.node_obj.solve_node_to_optimality()
+            if continue_value:
+                new_branching_index = self.node_obj.branching_variable_index
+            #Create children
+                up_child,down_child = current_node_label.create_children(new_branching_index)
+                self.unexplored_nodes.append(up_child)
+                self.unexplored_nodes.append(down_child)
+                current_node_label.feasible = True
+            else:
+                current_node_label.feasible = False
+
+            #Add current node to explored nodes
+            self.explored_nodes.append(current_node_label)
+
+            i += 1
+
+
+
+
 
 
         #Repeat while there are more unexplored child nodes or we reach the desired optimality gap
 
-        pass
 
 
 
-class NodeLabels:
+class NodeLabel:
     def __init__(self,
                  iterations_number,
                  parent,
@@ -40,4 +74,25 @@ class NodeLabels:
         self.iterations_number = iterations_number
         self.parent = parent
         self.up_list = up_list
-        self.down_list = down_listgi
+        self.down_list = down_list
+        self.solution = 0
+        self.feasible = None
+
+    def create_children(self, branching_index):
+        up_child = NodeLabel(
+            iterations_number=1000,
+            parent=self.iterations_number,
+            up_list= self.up_list + [branching_index],
+            down_list=self.down_list
+        )
+        down_child = NodeLabel(
+            iterations_number=1000,
+            parent=self,
+            up_list= self.up_list,
+            down_list=self.down_list + [branching_index]
+        )
+
+        return up_child, down_child
+
+
+

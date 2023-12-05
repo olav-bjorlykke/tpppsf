@@ -1,5 +1,7 @@
 import pandas as pd
 from master_problem import MasterProblem
+import gurobipy as gp
+from gurobipy import GRB
 
 
 
@@ -56,7 +58,13 @@ class Node:
             self.master_problem.add_new_column_to_columns_df(new_column)
             self.master_problem.run_and_solve_master_problem()
 
+            if self.master_problem.model.status == GRB.INFEASIBLE or self.master_problem.model.status == GRB.UNBOUNDED:
+                return False
+
             shadow_prices_MAB = self.master_problem.get_MAB_constr_shadow_prices_df()
+
+            if type(shadow_prices_MAB) == type(None):
+                return False
 
             for sub_problem in self.sub_problems:
                 sub_problem.set_shadow_prices_df(shadow_prices_MAB)
@@ -64,8 +72,10 @@ class Node:
             print(f"Iteration {i}")
             i += 1
 
-        self.branching_variable_index = self.master_problem.find_deploy_branching_variable()
+        new_index = self.master_problem.find_deploy_branching_variable()
+        self.branching_variable_index = [new_index[0], new_index[1]]
         print("Self branching variable",self.branching_variable_index)
+        return True
 
     def set_down_branching_constraint(self):
         self.master_problem.branched_variable_indices_down.append(self.branching_variable_index)
@@ -79,6 +89,29 @@ class Node:
         self.set_up_branching_constraint()
         self.master_problem.is_model_solved = False
         self.branching_variable_index = None
+
+    def reset_for_new_node(self, node_label):
+        print("####################\n\n")
+        print("ITERATION OLAV AND HENRIK", node_label.iterations_number)
+        print(node_label.up_list)
+        print(node_label.down_list)
+        print("\n\n####################")
+
+        self.master_problem.branched_variable_indices_up = node_label.up_list
+        self.master_problem.branched_variable_indices_down = node_label.down_list
+
+        for i in range(len(self.sub_problems)):
+            self.sub_problems[i].branching_variable_indices_up = []
+            self.sub_problems[i].branching_variable_indices_down = []
+
+            for indice in node_label.up_list:
+                if indice[0] == i:
+                    self.sub_problems[i].branching_variable_indices_up.append(indice[1])
+
+            for indice in node_label.down_list:
+                if indice[0] == i:
+                    self.sub_problems[i].branching_variable_indices_down.append(indice[1])
+
 
     def preform_down_branching(self):
         self.set_down_branching_constraint()
