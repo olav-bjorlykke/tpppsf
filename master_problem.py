@@ -36,6 +36,7 @@ class MasterProblem:
         self.locations_l = None
         self.scenarios_s = None
         self.smolt_types_f = None
+        self.iterations = 0
 
 
     """
@@ -81,6 +82,35 @@ class MasterProblem:
     """
     FUNCTIONS FOR RUNNING THE MODEL
     """
+    def run_MIP_problem(self):
+        self.model = gp.Model(f"Master Problem {self.iterations_k}")
+
+        # Set sets and declare variables
+        self.set_sets()
+        self.declare_MIP_variables()
+
+        # Set objective
+        self.set_true_objective()
+
+        # Add constraints to the mode
+        self.add_convexity_constraint()
+        self.add_MAB_constraint()
+        self.add_binary_variable_tracking_constraints()
+
+        # Add branching constraints to the model
+        for indice in self.branched_variable_indices_up:
+            self.add_up_branching_constraint(indice)
+
+        for indice in self.branched_variable_indices_down:
+            self.add_down_branching_constraint(indice)
+
+        # Solve model
+        self.model.optimize()
+
+        # Print solution
+        self.print_solution()
+
+
 
     def run_and_solve_master_problem(self):
         """
@@ -118,6 +148,8 @@ class MasterProblem:
         #Check if we have reached optimality for the LP relaxed problem
         self.check_optimality()
 
+        self.iterations += 1
+
     """
     SETTING SETS AND VARIABLES FUNCTIONS
     """
@@ -142,6 +174,15 @@ class MasterProblem:
         self.harvest_bin = self.model.addVars(len(self.locations_l), len(self.smolt_types_f), len(self.periods_t), len(self.periods_t), len(self.scenarios_s),vtype=GRB.CONTINUOUS)
         self.employ_bin = self.model.addVars(len(self.locations_l), len(self.smolt_types_f), len(self.periods_t), len(self.periods_t), len(self.scenarios_s),vtype=GRB.CONTINUOUS)
 
+    def declare_MIP_variables(self):
+        self.lambda_var = self.model.addVars(len(self.locations_l), len(self.iterations_k), vtype=GRB.BINARY, lb=0)
+        self.penalty_var = self.model.addVars(len(self.locations_l))
+
+        #Declaring the binary tracking variables
+        self.deploy_bin = self.model.addVars(len(self.locations_l), len(self.periods_t), vtype=GRB.CONTINUOUS)
+        self.deploy_type_bin = self.model.addVars(len(self.locations_l), len(self.smolt_types_f), len(self.periods_t), vtype=GRB.CONTINUOUS)
+        self.harvest_bin = self.model.addVars(len(self.locations_l), len(self.smolt_types_f), len(self.periods_t), len(self.periods_t), len(self.scenarios_s),vtype=GRB.CONTINUOUS)
+        self.employ_bin = self.model.addVars(len(self.locations_l), len(self.smolt_types_f), len(self.periods_t), len(self.periods_t), len(self.scenarios_s),vtype=GRB.CONTINUOUS)
 
     """
     SETTING OBJECTIVE AND ADDING CONSTRAINTS
@@ -151,35 +192,68 @@ class MasterProblem:
         Sets the objective function for the model - chapter 6.3 in Bjorlykke & Vassbotten
         :return:
         """
+        if self.iterations < 10:
+            self.set_objective_with_penalty_var()
+        else:
+            self.set_true_objective()
+
+    def set_true_objective(self):
         self.model.setObjective(
-            #This objective corresponds to the objective function in the decomposition model in chapter 6.3 in Bjorlykke and Vassbotten
-             gp.quicksum(
-                 #Fetches scenario probabilities from the scenarios object and multiplicates it with the below expression
-                 self.scenarios.scenario_probabilities[s]*
-                    #Sums the product of the harvest parameter and the lambda variable for all combinations of location, iteraiont, smolt weight, deploy period and current period
+            # This objective corresponds to the objective function in the decomposition model in chapter 6.3 in Bjorlykke and Vassbotten
+            gp.quicksum(
+                # Fetches scenario probabilities from the scenarios object and multiplicates it with the below expression
+                self.scenarios.scenario_probabilities[s] *
+                # Sums the product of the harvest parameter and the lambda variable for all combinations of location, iteraiont, smolt weight, deploy period and current period
+                gp.quicksum(
+                    # Fetches the parameter from the columns dataframe and products it with the lambda variable
+                    self.columns.loc[(k, l, s, f, t_hat, t)]["W"] * self.lambda_var[l, k]
+                    for l in self.locations_l
+                    for k in self.iterations_k
+                    for f in self.smolt_types_f
+                    for t_hat in
+                    self.columns.loc[(k, l, s, f)].index.get_level_values("Deploy period").unique().tolist()
+                    for t in
+                    self.columns.loc[(k, l, s, f, t_hat)].index.get_level_values("Period").unique().tolist()
+                )
+                for s in self.scenarios_s
+            )
+            , sense=GRB.MAXIMIZE
+        )
+
+    def set_objective_with_penalty_var(self):
+        if self.iterations < 10:
+            self.model.setObjective(
+                # This objective corresponds to the objective function in the decomposition model in chapter 6.3 in Bjorlykke and Vassbotten
+                gp.quicksum(
+                    # Fetches scenario probabilities from the scenarios object and multiplicates it with the below expression
+                    self.scenarios.scenario_probabilities[s] *
+                    # Sums the product of the harvest parameter and the lambda variable for all combinations of location, iteraiont, smolt weight, deploy period and current period
                     gp.quicksum(
-                        #Fetches the parameter from the columns dataframe and products it with the lambda variable
-                        self.columns.loc[(k,l,s,f,t_hat,t)]["W"] * self.lambda_var[l,k]
+                        # Fetches the parameter from the columns dataframe and products it with the lambda variable
+                        self.columns.loc[(k, l, s, f, t_hat, t)]["W"] * self.lambda_var[l, k]
                         for l in self.locations_l
                         for k in self.iterations_k
                         for f in self.smolt_types_f
-                        for t_hat in self.columns.loc[(k,l,s,f)].index.get_level_values("Deploy period").unique().tolist()
-                        for t in self.columns.loc[(k,l,s,f,t_hat)].index.get_level_values("Period").unique().tolist()
+                        for t_hat in
+                        self.columns.loc[(k, l, s, f)].index.get_level_values("Deploy period").unique().tolist()
+                        for t in
+                        self.columns.loc[(k, l, s, f, t_hat)].index.get_level_values("Period").unique().tolist()
                     )
-                 for s in self.scenarios_s
-             )
-             -
-             #Adds a penalty variable. This variable ensures feasibility when the iteration count is low. However the penalty is set to be so high as to it never being used in a real solution.
-             gp.quicksum(self.penalty_var[l] * 10000000000000000 for l in self.locations_l)
-            ,sense=GRB.MAXIMIZE
-        )
+                    for s in self.scenarios_s
+                )
+                -
+                # Adds a penalty variable. This variable ensures feasibility when the iteration count is low. However the penalty is set to be so high as to it never being used in a real solution.
+                gp.quicksum(self.penalty_var[l] * 10000000000000000 for l in self.locations_l)
+                , sense=GRB.MAXIMIZE
+            )
+
 
     def add_convexity_constraint(self):
         """
         Adds the convecity constraint, see chapter 6.3 in Bjorlykke and Vasbotten for mathematical description
         :return:
         """
-        if len(self.iterations_k) < 10:
+        if self.iterations < 10:
             for l in self.locations_l:
                 self.model.addConstr(
                     gp.quicksum(
