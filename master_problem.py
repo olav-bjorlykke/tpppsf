@@ -599,7 +599,7 @@ class MasterProblem:
             common_columns = self.previous_solution.columns.intersection(new_solution.columns)
 
             #Checks if all elements in the columns the dataframe have in common are the same within a tolerance.
-            is_the_same_within_tolerance = np.allclose(new_solution[common_columns], self.previous_solution[common_columns], rtol=0.01)
+            is_the_same_within_tolerance = np.allclose(new_solution[common_columns], self.previous_solution[common_columns], rtol=0.001)
             if is_the_same_within_tolerance:
                 #If te dataframes are the same -> We have reachec optimality -> Set is_model_solved variable to be true.
                 self.is_model_solved = True
