@@ -623,7 +623,7 @@ class MasterProblem:
             deploy_vars_df.loc[(elem[0])][elem[1]] = 0
 
         stacked_df = deploy_vars_df.stack()
-        closest_to_1_index = (stacked_df -1).abs().idxmin()
+        closest_to_1_index = (stacked_df -0.5).abs().idxmin()
 
         return closest_to_1_index
 
