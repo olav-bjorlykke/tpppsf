@@ -192,7 +192,7 @@ class MasterProblem:
         Sets the objective function for the model - chapter 6.3 in Bjorlykke & Vassbotten
         :return:
         """
-        if self.iterations < 10:
+        if self.iterations < 0:
             self.set_objective_with_penalty_var()
         else:
             self.set_true_objective()
@@ -623,7 +623,7 @@ class MasterProblem:
             deploy_vars_df.loc[(elem[0])][elem[1]] = 0
 
         stacked_df = deploy_vars_df.stack()
-        closest_to_1_index = (stacked_df -0.5).abs().idxmin()
+        closest_to_1_index = (stacked_df - 1).abs().idxmin()
 
         return closest_to_1_index
 

@@ -12,8 +12,6 @@ import subproblem_list
 from orchestration_class import Orchestration
 
 
-
-
 orchestration = Orchestration(
     subproblems=subproblem_list.short_sub_problem_list
 )

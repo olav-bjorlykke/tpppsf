@@ -28,14 +28,14 @@ class Orchestration:
         init_node_label = NodeLabel(
             iterations_number=0,
             parent=None,
-            up_list=[[0,0]],
+            up_list=[[0,0],[1,0],[2,0]],
             down_list = [],
         )
 
         self.unexplored_nodes.append(init_node_label)
         i = 0
         #Solve Node in unexplored nodes
-        while self.unexplored_nodes and len(self.explored_nodes) < 30:
+        while self.unexplored_nodes and len(self.explored_nodes) < 200:
             start_time = time.perf_counter()
 
             current_node_label = self.unexplored_nodes.pop(0)

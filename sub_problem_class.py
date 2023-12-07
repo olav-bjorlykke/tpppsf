@@ -25,7 +25,7 @@ class SubProblem:
         #Setting variables to contain the size of sets
         self.f_size = 1  #TODO: declare using the smolt set
         self.t_size = self.parameters.number_periods
-        self.s_size = 2  #TODO: len(parameters.scenario_probabilities)
+        self.s_size = 3  #TODO: len(parameters.scenario_probabilities)
 
         #Defining some variables from the data objects for easier reference
         self.growth_factors = self.site.growth_per_scenario_df
@@ -71,6 +71,39 @@ class SubProblem:
             self.iterations += 1
 
         #Putting solution into variables for export
+
+    def create_zero_columns(self):
+        self.model = gp.Model(f"Single site solution {self.site.name}")
+
+        # Declaing variables
+        self.declare_variables()
+
+        # Setting objective
+        self.set_zero_ojective()
+
+        # Adding constraints
+        self.add_smolt_deployment_constraints()
+        self.add_fallowing_constraints()
+        self.add_inactivity_constraints()
+        self.add_harvesting_constraints()
+        self.add_biomass_development_constraints()
+        self.add_MAB_requirement_constraint()
+        self.add_initial_condition_constraint()
+        self.add_forcing_constraints()
+        self.add_up_branching_constraints()
+        self.add_down_branching_constraints()
+
+        # Running gurobi to optimize model
+        self.model.optimize()
+
+        # Printing solution
+        if self.model.status == GRB.OPTIMAL:
+            # self.print_solution_to_excel()
+            # self.plot_solutions_x_values()
+            self.iterations += 1
+
+        # Putting solution into variables for export
+
 
     def declare_variables(self):
         self.x = self.model.addVars(self.f_size, self.t_size, self.t_size, self.s_size, vtype=GRB.CONTINUOUS, lb=0)
@@ -118,6 +151,23 @@ class SubProblem:
 
         else:
             self.set_objective()
+
+    def set_zero_ojective(self):
+        self.model.setObjective(
+            # This is the objective (5.2) - which represents the objective for biomass maximization
+            gp.quicksum(
+                self.scenario.scenario_probabilities[s] *
+                gp.quicksum(
+                    self.w[f, t_hat, t, s]
+                    for f in range(self.f_size)
+                    for t_hat in range(self.t_size)
+                    for t in range(min(t_hat + self.parameters.temp_growth_period, self.t_size), self.t_size)
+                )
+                for s in range(self.s_size)
+            )
+            , GRB.MINIMIZE
+        )
+
 
     def add_smolt_deployment_constraints(self):
         self.model.addConstrs(
@@ -361,40 +411,54 @@ class SubProblem:
         Please don't touch it
         """
         if self.model.status != GRB.OPTIMAL:
-            return pd.DataFrame
+            return pd.DataFrame()
 
         deploy_period_list = self.get_deploy_period_list()
 
-        df_storage = []
-        for s in range(self.s_size):
-            l1_df_storage = []
-            for f in range(self.f_size):
-                l2_df_storage = []
-                for deploy_period in deploy_period_list:
-                    l3_data_storage = []
-                    for t in range(deploy_period, min(deploy_period + self.parameters.max_periods_deployed, self.t_size)):
-                        x_entry = self.x[f, deploy_period, t, s].x
-                        w_entry = self.w[f, deploy_period, t, s].x
-                        employ_entry = self.employ_bin[t,s].x
-                        harvest_entry = self.harvest_bin[t,s].x
-                        deploy_entry = self.deploy_bin[t].x
-                        deploy_type_entry = self.deploy_type_bin[f,t].x
-                        l3_data_storage.append([x_entry,w_entry,employ_entry, harvest_entry, deploy_entry, deploy_type_entry])
-                    columns = ["X", "W", "Employ bin", "Harvest bin", "Deploy bin", "Deploy type bin"]
-                    index = [i + deploy_period for i in range(len(l3_data_storage))]
-                    l2_df_storage.append(pd.DataFrame(l3_data_storage, columns=columns, index=index))
-                keys_l2 = [i for i in deploy_period_list]
-                l1_df_storage.append(pd.concat(l2_df_storage, keys=keys_l2))
-            keys_l1 = [i for i in range(len(l1_df_storage))]
-            df_storage.append(pd.concat(l1_df_storage, keys=keys_l1))
-        keys = [i for i in range(len(df_storage))]
-        df = pd.concat(df_storage, keys=keys)
 
-        df.index.names = ["Scenario", "Smolt type", "Deploy period", "Period"]
+        try:
+            df_storage = []
+            for s in range(self.s_size):
+                l1_df_storage = []
+                for f in range(self.f_size):
+                    l2_df_storage = []
+                    for deploy_period in deploy_period_list:
+                        l3_data_storage = []
+                        for t in range(deploy_period,
+                                       min(deploy_period + self.parameters.max_periods_deployed, self.t_size)):
+                            x_entry = self.x[f, deploy_period, t, s].x
+                            w_entry = self.w[f, deploy_period, t, s].x
+                            employ_entry = self.employ_bin[t, s].x
+                            harvest_entry = self.harvest_bin[t, s].x
+                            deploy_entry = self.deploy_bin[t].x
+                            deploy_type_entry = self.deploy_type_bin[f, t].x
+                            l3_data_storage.append(
+                                [x_entry, w_entry, employ_entry, harvest_entry, deploy_entry, deploy_type_entry])
+                        columns = ["X", "W", "Employ bin", "Harvest bin", "Deploy bin", "Deploy type bin"]
+                        index = [i + deploy_period for i in range(len(l3_data_storage))]
+                        l2_df_storage.append(pd.DataFrame(l3_data_storage, columns=columns, index=index))
+                    keys_l2 = [i for i in deploy_period_list]
+                    l1_df_storage.append(pd.concat(l2_df_storage, keys=keys_l2))
+                keys_l1 = [i for i in range(len(l1_df_storage))]
+                df_storage.append(pd.concat(l1_df_storage, keys=keys_l1))
+            keys = [i for i in range(len(df_storage))]
+            df = pd.concat(df_storage, keys=keys)
 
-        self.second_stage_variables = df
+            df.index.names = ["Scenario", "Smolt type", "Deploy period", "Period"]
 
-        return df
+            self.second_stage_variables = df
+
+            return df
+        except:
+            print("Exception")
+            return pd.DataFrame()
+
+        else:
+            print("Exception")
+            return pd.DataFrame()
+
+
+
 
     def set_shadow_prices_df(self, shadow_prices_df):
         self.MAB_shadow_prices_df = shadow_prices_df

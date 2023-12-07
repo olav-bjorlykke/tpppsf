@@ -1,0 +1,1 @@
+ITERATION:0;FEASIBLE SOLUTION:None;UPPER BOUND:0;up_list:|0,0|;Down_list:|

@@ -28,7 +28,7 @@ class Node:
         #Iterating through every column in the subproblems list
         for sub_problem in self.sub_problems:
             #Solving the sub problem
-            sub_problem.solve_and_print_model()
+            sub_problem.create_zero_columns()
             #Adding the results df from the solved model to the list
             new_column.append(sub_problem.get_second_stage_variables_df())
 
