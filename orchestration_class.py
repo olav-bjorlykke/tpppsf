@@ -39,7 +39,7 @@ class Orchestration:
         self.unexplored_nodes.append(init_node_label)
         i = 0
         #Solve Node in unexplored nodes
-        while self.unexplored_nodes and len(self.explored_nodes) < 200:
+        while self.unexplored_nodes and len(self.explored_nodes) < 1000:
             start_time = time.perf_counter()
 
             current_node_label = self.unexplored_nodes.pop(0)
@@ -62,7 +62,7 @@ class Orchestration:
                     current_node_label.feasible_solution = self.node_obj.master_problem.model.ObjVal
 
 
-                    if current_node_label.feasible_solution >= current_node_label.parent_feasible_solution:
+                    if current_node_label.feasible_solution >= current_node_label.parent_feasible_solution * 0.99:
                         #Create children
                         up_child, down_child = current_node_label.create_children(new_branching_index)
                         self.unexplored_nodes.append(up_child)
