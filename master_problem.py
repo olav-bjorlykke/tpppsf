@@ -145,8 +145,9 @@ class MasterProblem:
         #Print solution
         self.print_solution()
 
-        #Check if we have reached optimality for the LP relaxed problem
+        #Check if we have reached optimality for the LP relaxed problem, or if two columns are the same
         self.check_optimality()
+        self.check_column_equal()
 
         self.iterations += 1
 
@@ -606,6 +607,17 @@ class MasterProblem:
 
             #Sets current solution to be previous solution
             self.previous_solution = new_solution
+
+    def check_column_equal(self):
+        current_iteration = len(self.iterations_k) - 1
+        if current_iteration > 2:
+            previous_column = self.columns.loc[(current_iteration - 1)]
+            new_column = self.columns.loc[(current_iteration)]
+
+            if new_column.index.equals(previous_column.index):
+                columns_to_check = ["Employ bin", "Harvest bin", "Deploy bin", "Deploy type bin"]
+                if new_column[columns_to_check].equals(previous_column[columns_to_check]):
+                    self.is_model_solved = True
 
 
 
