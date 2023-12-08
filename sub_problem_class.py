@@ -25,7 +25,7 @@ class SubProblem:
         #Setting variables to contain the size of sets
         self.f_size = 1  #TODO: declare using the smolt set
         self.t_size = self.parameters.number_periods
-        self.s_size = 3  #TODO: len(parameters.scenario_probabilities)
+        self.s_size = 1  #TODO: len(parameters.scenario_probabilities)
 
         #Defining some variables from the data objects for easier reference
         self.growth_factors = self.site.growth_per_scenario_df

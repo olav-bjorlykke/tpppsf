@@ -83,9 +83,6 @@ site_11 = Site(
 site_12 = Site(
     scenario_temperatures=scenarios_test.scenario_temperatures_per_site_df.loc[area_senja_string],
     MAB_capacity=3600*1000,
-    init_biomass=100 * 1000,
-    init_avg_weight=3200,
-    init_biomass_months_deployed=15,
     site_name="FLESEN"
 )
 site_13 = Site(
@@ -107,9 +104,6 @@ site_16 = Site(
     scenario_temperatures=scenarios_test.scenario_temperatures_per_site_df.loc[area_nordtroms_string],
     MAB_capacity=5000*1000,
     site_name="HAUKØYA Ø",
-    init_biomass=200 * 1000,
-    init_avg_weight=3200,
-    init_biomass_months_deployed=16,
 )
 
 

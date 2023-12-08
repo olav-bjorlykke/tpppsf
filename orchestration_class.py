@@ -12,6 +12,8 @@ class Orchestration:
     running the Branch and Price framework for solving the Dantzig-Wolfe decomposition with column generation
     """
 
+    is_one_feasible_solution_found = False
+
 
     def __init__(self,
                  subproblems,
@@ -28,8 +30,10 @@ class Orchestration:
         init_node_label = NodeLabel(
             iterations_number=0,
             parent=None,
-            up_list=[[0,0],[1,0],[2,0]],
+            up_list=[[0,0]],
             down_list = [],
+            parent_feasible_solution=0,
+            parent_iteration=0
         )
 
         self.unexplored_nodes.append(init_node_label)
@@ -53,14 +57,25 @@ class Orchestration:
                 #Solve the Node for the MIP problem
                 self.node_obj.master_problem.run_MIP_problem()
                 if self.node_obj.master_problem.model.status == GRB.OPTIMAL and not self.node_obj.master_problem.model.status == GRB.INFEASIBLE:
+                    self.is_one_feasible_solution_found = True
                     current_node_label.feasible = True
                     current_node_label.feasible_solution = self.node_obj.master_problem.model.ObjVal
 
 
+                    if current_node_label.feasible_solution >= current_node_label.parent_feasible_solution:
+                        #Create children
+                        up_child, down_child = current_node_label.create_children(new_branching_index)
+                        self.unexplored_nodes.append(up_child)
+                        self.unexplored_nodes.append(down_child)
+
+                if not self.is_one_feasible_solution_found:
+                    up_child, down_child = current_node_label.create_children(new_branching_index)
+                    self.unexplored_nodes.append(up_child)
+                    self.unexplored_nodes.append(down_child)
+
+
             #Create children
-                up_child,down_child = current_node_label.create_children(new_branching_index)
-                self.unexplored_nodes.append(up_child)
-                self.unexplored_nodes.append(down_child)
+
 
 
             else:

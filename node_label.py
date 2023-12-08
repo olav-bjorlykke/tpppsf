@@ -5,8 +5,10 @@ class NodeLabel:
                  parent,
                  up_list,
                  down_list,
-                 upper_bound = 0,
-                 feasible_solution = None
+                 parent_feasible_solution,
+                 parent_iteration,
+                 upper_bound=None,
+                 feasible_solution = None,
                  ):
         self.iterations_number = iterations_number
         self.parent = parent
@@ -16,19 +18,25 @@ class NodeLabel:
         self.feasible = None
         self.upper_bound = upper_bound
         self.feasible_solution = feasible_solution
+        self.parent_feasible_solution = parent_feasible_solution
+        self.parent_iteration = parent_iteration
 
     def create_children(self, branching_index):
         up_child = NodeLabel(
             iterations_number=1000,
             parent=self.iterations_number,
             up_list= self.up_list + [branching_index],
-            down_list=self.down_list
+            down_list=self.down_list,
+            parent_feasible_solution=self.feasible_solution,
+            parent_iteration=self.iterations_number
         )
         down_child = NodeLabel(
             iterations_number=1000,
             parent=self,
             up_list= self.up_list,
-            down_list=self.down_list + [branching_index]
+            down_list=self.down_list + [branching_index],
+            parent_feasible_solution=self.feasible_solution,
+            parent_iteration=self.iterations_number,
         )
 
         return up_child, down_child
@@ -36,6 +44,7 @@ class NodeLabel:
     def print_node_label_to_file(self, time_to_run):
         with open("results.txt", "a") as file:
             file.write("ITERATION:" + str(self.iterations_number))
+            file.write("PARENT:" + str(self.parent_iteration))
             file.write(";TIME:" + str(time_to_run))
             file.write(";FEASIBLE SOLUTION:" + str(self.feasible_solution))
             file.write(";UPPER BOUND:" + str(self.upper_bound))

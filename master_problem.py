@@ -394,7 +394,7 @@ class MasterProblem:
 
     def add_down_branching_constraint(self, indice):
         self.model.addConstr(
-            self.deploy_bin[indice[0], indice[1]] == 1
+            self.deploy_bin[indice[0], indice[1]] == 0
             , name=f"Branching constraint : {indice}"
         )
 

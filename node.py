@@ -2,6 +2,7 @@ import pandas as pd
 from master_problem import MasterProblem
 import gurobipy as gp
 from gurobipy import GRB
+from zero_column import do_nothing_column
 
 
 
@@ -27,10 +28,15 @@ class Node:
         new_column = []
         #Iterating through every column in the subproblems list
         for sub_problem in self.sub_problems:
-            #Solving the sub problem
-            sub_problem.create_zero_columns()
-            #Adding the results df from the solved model to the list
-            new_column.append(sub_problem.get_second_stage_variables_df())
+            if sub_problem.site.init_biomass > 1:
+                # Solving the sub problem
+                sub_problem.create_zero_columns()
+                # Adding the results df from the solved model to the list
+                new_column.append(sub_problem.get_second_stage_variables_df())
+
+            else:
+                new_column.append(do_nothing_column)
+
 
         #Concatinating the results dataframe from every location to one multiindex dataframe
         new_column_df = pd.concat(new_column, keys=[i for i in range(len(new_column))])
@@ -53,9 +59,7 @@ class Node:
         self.master_problem.is_model_solved = False
         i=1
         while not self.master_problem.is_model_solved:
-            self.solve_sub_problems()
-            new_column = self.get_columns_from_sub_problems()
-            self.master_problem.add_new_column_to_columns_df(new_column)
+
             self.master_problem.run_and_solve_master_problem()
 
             if self.master_problem.model.status == GRB.INFEASIBLE or self.master_problem.model.status == GRB.UNBOUNDED:
@@ -68,6 +72,10 @@ class Node:
 
             for sub_problem in self.sub_problems:
                 sub_problem.set_shadow_prices_df(shadow_prices_MAB)
+
+            self.solve_sub_problems()
+            new_column = self.get_columns_from_sub_problems()
+            self.master_problem.add_new_column_to_columns_df(new_column)
 
             print(f"Iteration {i}")
             i += 1
