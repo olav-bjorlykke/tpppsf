@@ -1,12 +1,19 @@
 import numpy as np
 import pandas as pd
 
+
+
 class GlobalParameters:
+    mab_company_small_instance = 3144 * 1000
+    mab_company_medium_instance = 8948 * 1000
+    mab_company_full_instance = 16488 * 1000
+
+
     smolt_deployment_upper_bound = 2400000 #Upper bound for number of smolt deployed
     smolt_deployment_lower_bound = 10000 #Lower bound of smolt deployed
     max_harvest = 2000 * 1000 #Max biomass that can be harvested in any period in tons
     min_harvest = 100 *1000 #Minimum amount of biomass that can be harvested if biomass is harvested in tons
-    max_harvest_company = 6000 * 1000 #Max biomass that can be havested across the company in tons, currently unlimited
+    max_harvest_company = 7500 * 1000 #Max biomass that can be havested across the company in tons, currently unlimited
     expected_production_loss = 0.005 #Expected loss per period
     MAB_company_limit = 5000 * 1000 #Max biomass deployed across the company
     MAB_site_limit = 3000 * 1000 #TODO: This is a placeholder, get the real thing from the site datastructure
