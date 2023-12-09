@@ -5,6 +5,7 @@ from master_problem import MasterProblem
 from node import Node
 from gurobipy import GRB
 from node_label import NodeLabel
+import subproblem_list
 
 class Orchestration:
     """
@@ -30,7 +31,7 @@ class Orchestration:
         init_node_label = NodeLabel(
             iterations_number=0,
             parent=None,
-            up_list=[[0,0]],
+            up_list=subproblem_list.short_node_init_list,
             down_list = [],
             parent_feasible_solution=0,
             parent_iteration=0

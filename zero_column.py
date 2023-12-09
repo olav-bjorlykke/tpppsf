@@ -31,4 +31,4 @@ def generate_zero_column(num_smolt_weight, num_scenarios):
     df.index.names = ["Scenario", "Smolt type", "Deploy period", "Period"]
     return df
 
-do_nothing_column = generate_zero_column(num_smolt_weight=1,num_scenarios=2)
+do_nothing_column = generate_zero_column(num_smolt_weight=1,num_scenarios=5)
