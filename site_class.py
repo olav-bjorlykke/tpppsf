@@ -274,6 +274,8 @@ class Site:
                     growth_array[i][j] = weight_frame.iloc[i][j+1]/weight_frame.iloc[i][j]
                 else:
                     growth_array[i][j] = 0
+
+                growth_array[i][59] = growth_array[i][58]
         #Read data from array into dataframe
         growth_df = pd.DataFrame(growth_array, columns=[i for i in range(number_periods)],index=[i for i in range(number_periods)])
         return growth_df

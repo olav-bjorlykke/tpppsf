@@ -25,7 +25,7 @@ class MonolithicProblem:
         #Setting variables to contain the size of sets
         self.f_size = 1  #TODO: declare using the smolt set
         self.t_size = self.parameters.number_periods
-        self.s_size = 1  #TODO: len(parameters.scenario_probabilities)
+        self.s_size = 2  #TODO: len(parameters.scenario_probabilities)
         self.l_size = len(self.sites)
 
         #Defining some variables from the data objects for easier reference
@@ -330,7 +330,7 @@ class MonolithicProblem:
                 for s in range(self.s_size):
                     self.model.addConstr(
                         gp.quicksum(self.x[l, f, t_hat, t, s] for l in range(self.l_size) for t_hat in range(t) for f in range(self.f_size))
-                         <= 2500 * 1000
+                         <= 4000 * 1000
                         , name="company MAB limit"
                     )
 
