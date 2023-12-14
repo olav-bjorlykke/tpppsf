@@ -337,7 +337,7 @@ class MonolithicProblem:
     def add_end_of_horizon_constraint(self):
             for s in range(self.s_size):
                 self.model.addConstr(
-                    gp.quicksum(self.x[l, f, t_hat, 59, s] for l in range(self.l_size) for t_hat in range(59 - self.parameters.max_periods_deployed, 59) for f in range(self.f_size))
+                    gp.quicksum(self.x[l, f, t_hat, 60, s] for l in range(self.l_size) for t_hat in range(60 - self.parameters.max_periods_deployed, 59) for f in range(self.f_size))
                     >=
                     self.parameters.eoh_down_ratio *
                     gp.quicksum(self.y[l, f, 0] for l in range(self.l_size) for f in range(self.f_size))
@@ -346,7 +346,7 @@ class MonolithicProblem:
 
             for s in range(self.s_size):
                 self.model.addConstr(
-                    gp.quicksum(self.x[l, f, t_hat, 59, s] for l in range(self.l_size) for t_hat in range(59 - self.parameters.max_periods_deployed, 59) for f in range(self.f_size))
+                    gp.quicksum(self.x[l, f, t_hat, 60, s] for l in range(self.l_size) for t_hat in range(60 - self.parameters.max_periods_deployed, 59) for f in range(self.f_size))
                     >=
                     self.parameters.MAB_company_limit * 0.5
                     , name="Second E0H down"
@@ -432,7 +432,7 @@ class MonolithicProblem:
             df = dfs[l]
             for s in range(scenarios):
                 scenarios_x_values = []
-                for t in range(self.t_size):
+                for t in range(self.t_size +1):
                     x_t = 0
                     for t_hat in range(self.t_size):
                         for f in range(self.f_size):
@@ -442,7 +442,7 @@ class MonolithicProblem:
                 x_values.append(scenarios_x_values)
 
             #Declaring a variable for storing the x-axis to be used in the plot
-            x_axis = np.arange(0,self.t_size)
+            x_axis = np.arange(0,self.t_size +1)
 
             #Adding to the plots
             for scenario in x_values:
@@ -515,9 +515,10 @@ class MonolithicProblem:
                                 harvest_entry = self.harvest_bin[l, t, s].x
                                 deploy_entry = self.deploy_bin[l, t].x
                                 deploy_type_entry = self.deploy_type_bin[l, f, t].x
+                                y_entry = self.y[l, f, t].X
                                 l3_data_storage.append(
-                                    [x_entry, w_entry, employ_entry, harvest_entry, deploy_entry, deploy_type_entry])
-                            columns = ["X", "W", "Employ bin", "Harvest bin", "Deploy bin", "Deploy type bin"]
+                                    [x_entry, w_entry, employ_entry, harvest_entry, deploy_entry, deploy_type_entry, y_entry])
+                            columns = ["X", "W", "Employ bin", "Harvest bin", "Deploy bin", "Deploy type bin", "Y"]
                             index = [i + deploy_period for i in range(len(l3_data_storage))]
                             l2_df_storage.append(pd.DataFrame(l3_data_storage, columns=columns, index=index))
                         keys_l2 = [i for i in deploy_period_list]
@@ -533,7 +534,7 @@ class MonolithicProblem:
 
             return deploy_period_dfs
         except:
-            print("Exception")
+            print("Exception, Dataframe not created")
             return pd.DataFrame()
 
 
