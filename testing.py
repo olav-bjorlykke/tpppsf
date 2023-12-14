@@ -41,7 +41,7 @@ mon_test = MonolithicProblem(
     [site_12, site_4]
 )
 
-site_12.weight_dev_per_scenario_df.to_excel("weight_scenario.xlsx")
-site_12.growth_per_scenario_df.to_excel("growth_scenario.xlsx")
-site_12.growth_sets.to_excel("growth_set.xlsx")
+site_12.weight_dev_per_scenario_df.to_excel("./results/weight_scenario.xlsx")
+site_12.growth_per_scenario_df.to_excel("./results/growth_scenario.xlsx")
+site_12.growth_sets.to_excel("./results/growth_set.xlsx")
 mon_test.solve_and_print_model()
