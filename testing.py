@@ -10,6 +10,12 @@ area_vesteralen_string = "Vesteralen"
 area_nordtroms_string = "Nord-Troms"
 area_senja_string = "Senja"
 
+site_4 = Site(
+    scenario_temperatures=scenarios_test.scenario_temperatures_per_site_df.loc[area_vesteralen_string],
+    MAB_capacity=3120*1000,
+    site_name="KUNESET"
+)
+
 site_16 = Site(
     scenario_temperatures=scenarios_test.scenario_temperatures_per_site_df.loc[area_nordtroms_string],
     MAB_capacity=5000*1000,
@@ -19,7 +25,7 @@ site_16 = Site(
 site_12 = Site(
     scenario_temperatures=scenarios_test.scenario_temperatures_per_site_df.loc[area_senja_string],
     MAB_capacity=3600*1000,
-    init_biomass=3536 * 1000,
+    init_biomass=1600 * 1000,
     init_avg_weight=6536,
     init_biomass_months_deployed=18,
     site_name="FLESEN"
@@ -32,7 +38,8 @@ site_13 = Site(
 )
 
 mon_test = MonolithicProblem(
-    [site_16, site_12, site_13]
+    [site_12, site_4]
 )
 
+site_12.growth_sets.to_excel("growth_set.xlsx")
 mon_test.solve_and_print_model()

@@ -25,7 +25,7 @@ class MonolithicProblem:
         #Setting variables to contain the size of sets
         self.f_size = 1  #TODO: declare using the smolt set
         self.t_size = self.parameters.number_periods
-        self.s_size = 5  #TODO: len(parameters.scenario_probabilities)
+        self.s_size = 1  #TODO: len(parameters.scenario_probabilities)
         self.l_size = len(self.sites)
 
         #Defining some variables from the data objects for easier reference
@@ -59,6 +59,7 @@ class MonolithicProblem:
         self.add_initial_condition_constraint()
         self.add_forcing_constraints()
         self.add_MAB_company_requirement_constraint()
+        self.add_end_of_horizon_constraint()
         #self.add_up_branching_constraints()
         #self.add_down_branching_constraints()
 
@@ -67,9 +68,10 @@ class MonolithicProblem:
 
         #Printing solution
         if self.model.status == GRB.OPTIMAL:
-            #self.print_solution_to_excel()
+            self.print_solution_to_excel()
             self.plot_solutions_x_values()
             self.iterations += 1
+
 
         #Putting solution into variables for export
 
@@ -179,7 +181,7 @@ class MonolithicProblem:
         #FIXED
         self.model.addConstrs(
             # This is the constraint (5.4) - which restricts the deployment of smolt to an upper bound, while forcing the binary deploy variable
-            gp.quicksum(self.parameters.smolt_weights[f] / 1000 * self.y[l, f, t] for f in
+            gp.quicksum((self.parameters.smolt_weights[f] / 1000) * self.y[l, f, t] for f in
                         range(self.f_size)) <= self.parameters.smolt_deployment_upper_bound * self.deploy_bin[l, t]
             # Divide by thousand, as smolt weight is given in grams, while deployed biomass is in kilos
             for t in range(self.t_size)
@@ -189,7 +191,7 @@ class MonolithicProblem:
         #FIXED
         self.model.addConstrs(
             # This is the constraint (5.4) - which restricts the deployment of smolt to a lower bound bound, while forcing the binary deploy variable
-            gp.quicksum(self.parameters.smolt_weights[f] / 1000 * self.y[l, f, t] for f in
+            gp.quicksum((self.parameters.smolt_weights[f] / 1000) * self.y[l, f, t] for f in
                         range(self.f_size)) >= self.parameters.smolt_deployment_lower_bound * self.deploy_bin[l,t]
             # Divide by thousand, as smolt weight is given in grams, while deployed biomass is in kilos
             for t in range(self.t_size)
@@ -198,7 +200,7 @@ class MonolithicProblem:
 
         #FIXED
         self.model.addConstrs(  # This is constraint (5.5) - setting a lower limit on smolt deployed from a single cohort
-            self.parameters.smolt_weights[f] / 1000 * self.y[l, f, t] >= self.parameters.smolt_deployment_lower_bound * self.deploy_type_bin[l,
+            (self.parameters.smolt_weights[f] / 1000) * self.y[l, f, t] >= self.parameters.smolt_deployment_lower_bound * self.deploy_type_bin[l,
                 f, t]
             for t in range(self.t_size)
             for f in range(self.f_size)
@@ -208,7 +210,7 @@ class MonolithicProblem:
         #FIXED
         self.model.addConstrs(
             # This is constraint (Currently not in model) - setting an upper limit on smolt deployed in a single cohort #TODO: Add to mathematical model
-            self.parameters.smolt_deployment_upper_bound * self.deploy_type_bin[l, f, t] >= self.parameters.smolt_weights[f] / 1000 * self.y[l,
+            self.parameters.smolt_deployment_upper_bound * self.deploy_type_bin[l, f, t] >= (self.parameters.smolt_weights[f] / 1000) * self.y[l,
                 f, t]
             for t in range(self.t_size)
             for f in range(self.f_size)
@@ -268,9 +270,9 @@ class MonolithicProblem:
 
     def add_biomass_development_constraints(self):
         self.model.addConstrs(  # This is constraint (5.9) - which ensures that biomass x = biomass deployed y
-            self.x[l, f, t_hat, t_hat, s] == self.y[l,f, t_hat]
+            self.x[l, f, t, t, s] == self.y[l,f, t]
             for f in range(self.f_size)
-            for t_hat in range(self.t_size)
+            for t in range(self.t_size)
             for s in range(self.s_size)
             for l in range(self.l_size)
         )
@@ -321,16 +323,31 @@ class MonolithicProblem:
         )
 
     def add_MAB_company_requirement_constraint(self):
-        self.model.addConstrs(
-            gp.quicksum(self.x[l, f, t_hat, t, s] for f in range(self.f_size) for l in
-                        range(self.l_size)) <= self.parameters.MAB_company_limit
-            for t_hat in range(self.t_size)
-            for t in range(t_hat, min(t_hat + self.parameters.max_periods_deployed, self.t_size))
-            for s in range(self.s_size)
-        )
+            for t in range(self.t_size):
+                for s in range(self.s_size):
+                    self.model.addConstr(
+                        gp.quicksum(self.x[l, f, t_hat, t, s] for l in range(self.l_size) for t_hat in range(t) for f in range(self.f_size))
+                         <= 2500 * 1000
+                        , name="company MAB limit"
+                    )
 
+    def add_end_of_horizon_constraint(self):
+            for s in range(self.s_size):
+                self.model.addConstr(
+                    gp.quicksum(self.x[l, f, t_hat, self.t_size -1, s] for l in range(self.l_size) for t_hat in range(self.t_size) for f in range(self.f_size))
+                    >=
+                    self.parameters.eoh_down_ratio *
+                    gp.quicksum(self.y[l, f, 0] for l in range(self.l_size) for f in range(self.f_size))
+                    , name="EOH down"
+                )
 
-
+            for s in range(self.s_size):
+                self.model.addConstr(
+                    gp.quicksum(self.x[l, f, t_hat, self.t_size -1, s] for l in range(self.l_size) for t_hat in range(self.t_size) for f in range(self.f_size))
+                    >=
+                    self.parameters.MAB_company_limit * 0.3
+                    , name="Second E0H down"
+                )
 
     def add_initial_condition_constraint(self): #TODO: Add initial constraints
         for l in range(self.l_size):
@@ -380,7 +397,10 @@ class MonolithicProblem:
         data_list = []
 
         if self.model.status == GRB.OPTIMAL:
-            self.get_second_stage_variables_df().to_excel(f"./results/sub_problem{self.site.name}.xlsx", index=True)
+            i = 0
+            for df in self.get_second_stage_variables_df():
+                df.to_excel(f"./results/mon_site{self.sites[i].name}.xlsx", index=True)
+                i+=1
 
     def plot_solutions_x_values(self):
         """

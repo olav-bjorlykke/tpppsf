@@ -3,8 +3,8 @@ import pandas as pd
 
 class GlobalParameters:
     smolt_deployment_upper_bound = 2400000 #Upper bound for number of smolt deployed
-    smolt_deployment_lower_bound = 10000 #Lower bound of smolt deployed
-    max_harvest = 2000 * 1000 #Max biomass that can be harvested in any period in tons
+    smolt_deployment_lower_bound = 10 #Lower bound of smolt deployed
+    max_harvest = 4000 * 1000 #Max biomass that can be harvested in any period in tons
     min_harvest = 100 *1000 #Minimum amount of biomass that can be harvested if biomass is harvested in tons
     max_harvest_company = 6000 * 1000 #Max biomass that can be havested across the company in tons, currently unlimited
     expected_production_loss = 0.002 #Expected loss per period
@@ -23,6 +23,8 @@ class GlobalParameters:
     bigM = 100000000
     weight_req_for_harvest = 3000.0
     scenario_probabilities = [0.1, 0.8, 0.1]
+    eoh_down_ratio = 0.6
+    eoh_up_ratio = 1.4
 
     def __init__(self):
         pass
