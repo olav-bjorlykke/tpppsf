@@ -41,7 +41,7 @@ class MonolithicProblem:
 
 
     def solve_and_print_model(self):
-        self.model = gp.Model(f"Single site solution {self.site.name}")
+        self.model = gp.Model(f"Single site solution")
 
         #Declaing variables
         self.declare_variables()
@@ -58,8 +58,8 @@ class MonolithicProblem:
         self.add_MAB_requirement_constraint()
         self.add_initial_condition_constraint()
         self.add_forcing_constraints()
-        self.add_up_branching_constraints()
-        self.add_down_branching_constraints()
+        #self.add_up_branching_constraints()
+        #self.add_down_branching_constraints()
 
         #Running gurobi to optimize model
         self.model.optimize()
@@ -117,14 +117,16 @@ class MonolithicProblem:
         self.employ_bin = self.model.addVars(self.l_size, self.t_size, self.s_size, vtype=GRB.BINARY)
 
     def set_objective(self):
+        #FIXED
         self.model.setObjective(  # This is the objective (5.2) - which represents the objective for biomass maximization
             gp.quicksum(
                 self.scenario.scenario_probabilities[s] *
                 gp.quicksum(
-                    self.w[f, t_hat, t, s]
+                    self.w[l, f, t_hat, t, s]
+                    for l in range(self.l_size)
                     for f in range(self.f_size)
                     for t_hat in range(self.t_size)
-                    for t in range(min(self.growth_sets.loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size - 1),
+                    for t in range(min(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size - 1),
                            min(t_hat + self.parameters.max_periods_deployed, self.t_size - 1))
                 )
                 for s in range(self.s_size)
@@ -173,147 +175,184 @@ class MonolithicProblem:
 
 
     def add_smolt_deployment_constraints(self):
+        #FIXED
         self.model.addConstrs(
             # This is the constraint (5.4) - which restricts the deployment of smolt to an upper bound, while forcing the binary deploy variable
-            gp.quicksum(self.parameters.smolt_weights[f] / 1000 * self.y[f, t] for f in
-                        range(self.f_size)) <= self.parameters.smolt_deployment_upper_bound * self.deploy_bin[t]
+            gp.quicksum(self.parameters.smolt_weights[f] / 1000 * self.y[l, f, t] for f in
+                        range(self.f_size)) <= self.parameters.smolt_deployment_upper_bound * self.deploy_bin[l, t]
             # Divide by thousand, as smolt weight is given in grams, while deployed biomass is in kilos
             for t in range(self.t_size)
+            for l in range(self.l_size)
         )
 
+        #FIXED
         self.model.addConstrs(
             # This is the constraint (5.4) - which restricts the deployment of smolt to a lower bound bound, while forcing the binary deploy variable
-            gp.quicksum(self.parameters.smolt_weights[f] / 1000 * self.y[f, t] for f in
-                        range(self.f_size)) >= self.parameters.smolt_deployment_lower_bound * self.deploy_bin[t]
+            gp.quicksum(self.parameters.smolt_weights[f] / 1000 * self.y[l, f, t] for f in
+                        range(self.f_size)) >= self.parameters.smolt_deployment_lower_bound * self.deploy_bin[l,t]
             # Divide by thousand, as smolt weight is given in grams, while deployed biomass is in kilos
             for t in range(self.t_size)
+            for l in range(self.l_size)
         )
 
+        #FIXED
         self.model.addConstrs(  # This is constraint (5.5) - setting a lower limit on smolt deployed from a single cohort
-            self.parameters.smolt_weights[f] / 1000 * self.y[f, t] >= self.parameters.smolt_deployment_lower_bound * self.deploy_type_bin[
+            self.parameters.smolt_weights[f] / 1000 * self.y[l, f, t] >= self.parameters.smolt_deployment_lower_bound * self.deploy_type_bin[l,
                 f, t]
             for t in range(self.t_size)
             for f in range(self.f_size)
+            for l in range(self.l_size)
         )
 
+        #FIXED
         self.model.addConstrs(
             # This is constraint (Currently not in model) - setting an upper limit on smolt deployed in a single cohort #TODO: Add to mathematical model
-            self.parameters.smolt_deployment_upper_bound * self.deploy_type_bin[f, t] >= self.parameters.smolt_weights[f] / 1000 * self.y[
+            self.parameters.smolt_deployment_upper_bound * self.deploy_type_bin[l, f, t] >= self.parameters.smolt_weights[f] / 1000 * self.y[l,
                 f, t]
             for t in range(self.t_size)
             for f in range(self.f_size)
+            for l in range(self.l_size)
         )
 
     def add_fallowing_constraints(self):
+        #Fixed
         self.model.addConstrs(
             # This is the constraint (5.6) - It ensures that the required fallowing is done before the deploy variable can be set to 1
-            self.parameters.min_fallowing_periods * self.deploy_bin[t] + gp.quicksum(
-                self.employ_bin[tau, s] for tau in range(t - self.parameters.min_fallowing_periods, t))
+            self.parameters.min_fallowing_periods * self.deploy_bin[l, t] + gp.quicksum(
+                self.employ_bin[l, tau, s] for tau in range(t - self.parameters.min_fallowing_periods, t))
             <= self.parameters.min_fallowing_periods
             for t in range(self.parameters.min_fallowing_periods, self.t_size)
-            for f in range(self.f_size)
             for s in range(self.s_size)
+            for l in range(self.l_size)
         )
 
+        #Fixed
         self.model.addConstrs(
             # This is an additional constraint - ensuring that only 1 deployment happens during the initial possible deployment period TODO: See if this needs to be implemented in the math model
-            gp.quicksum(self.deploy_bin[t] for t in range(self.parameters.min_fallowing_periods)) <= 1
-            for f in range(self.f_size)
+            gp.quicksum(self.deploy_bin[l,t] for t in range(self.parameters.min_fallowing_periods)) <= 1
+            for l in range(self.l_size)
         )
 
     def add_inactivity_constraints(self):
+        #Fixed
         self.model.addConstrs(
             # This is the constraint (5.7) - ensuring that the site is not inactive longer than the max fallowing limit
-            gp.quicksum(self.employ_bin[tau, s] for tau in range(t, min(t + self.parameters.max_fallowing_periods, self.t_size))) >= 1
+            gp.quicksum(self.employ_bin[l, tau, s] for tau in range(t, min(t + self.parameters.max_fallowing_periods, self.t_size))) >= 1
             # The sum function and therefore the t set is not implemented exactly like in the mathematical model, but functionality is the same
             for s in range(self.s_size)
             for t in range(self.t_size)
+            for l in range(self.l_size)
         )
 
     def add_harvesting_constraints(self):
+        #Fixed
         self.model.addConstrs(
             # This is the first part of constraint (5.8) - which limits harvest in a single period to an upper limit
-            gp.quicksum(self.w[f, t_hat, t, s] for f in range(self.f_size) for t_hat in range(t)) <= self.parameters.max_harvest *
-            self.harvest_bin[t, s]
+            gp.quicksum(self.w[l, f, t_hat, t, s] for f in range(self.f_size) for t_hat in range(t)) <= self.parameters.max_harvest *
+            self.harvest_bin[l,t, s]
             for t in range(self.t_size)
             for s in range(self.s_size)
+            for l in range(self.l_size)
         )
 
+        #Fixed
         self.model.addConstrs(
             # This is the second part of constraint (5.8) - which limits harvest in a single period to a lower limit
-            gp.quicksum(self.w[f, t_hat, t, s] for f in range(self.f_size) for t_hat in range(t)) >= self.parameters.min_harvest *
-            self.harvest_bin[t, s]
+            gp.quicksum(self.w[l, f, t_hat, t, s] for f in range(self.f_size) for t_hat in range(t)) >= self.parameters.min_harvest *
+            self.harvest_bin[l, t, s]
             for t in range(self.t_size)
             for s in range(self.s_size)
+            for l in range(self.l_size)
         )
 
     def add_biomass_development_constraints(self):
         self.model.addConstrs(  # This is constraint (5.9) - which ensures that biomass x = biomass deployed y
-            self.x[f, t_hat, t_hat, s] == self.y[f, t_hat]
+            self.x[l, f, t_hat, t_hat, s] == self.y[l,f, t_hat]
             for f in range(self.f_size)
             for t_hat in range(self.t_size)
             for s in range(self.s_size)
+            for l in range(self.l_size)
         )
 
+        #Fixed
         self.model.addConstrs(  # This represents the constraint (5.10) - which ensures biomass growth in the growth period
-            self.x[f, t_hat, t + 1, s] == (1 - self.parameters.expected_production_loss) * self.x[f, t_hat, t, s] *
-            self.growth_factors.loc[(self.smolt_weights[f], f"Scenario {s}", t_hat)][t]
-            # TODO:Introduce scenario and period specific G
+            self.x[l, f, t_hat, t + 1, s] == (1 - self.parameters.expected_production_loss) * self.x[l, f, t_hat, t, s] *
+            self.growth_factors[l].loc[(self.smolt_weights[f], f"Scenario {s}", t_hat)][t]
+            for l in range(self.l_size)
             for t_hat in range(self.t_size - 1)
             for f in range(self.f_size)
             for s in range(self.s_size)
             for t in
-            range(min(t_hat, self.t_size - 1), min(self.growth_sets.loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size - 1))
-
+            range(min(t_hat, self.t_size - 1), min(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size - 1))
         )
 
+        #Fixed
         self.model.addConstrs(  # This is the constraint (5.11) - Which tracks the biomass employed in the harvest period
-            self.x[f, t_hat, t + 1, s] == (1 - self.parameters.expected_production_loss) * self.x[f, t_hat, t, s] *
-            self.growth_factors.loc[(self.smolt_weights[f], f"Scenario {s}", t_hat)][t] - self.w[f, t_hat, t, s]
+            self.x[l, f, t_hat, t + 1, s] == (1 - self.parameters.expected_production_loss) * self.x[l,f, t_hat, t, s] *
+            self.growth_factors[l].loc[(self.smolt_weights[f], f"Scenario {s}", t_hat)][t] - self.w[l,f, t_hat, t, s]
+            for l in range(self.l_size)
             for t_hat in range(self.t_size - 1)
             for f in range(self.f_size)
             for s in range(self.s_size)
-            for t in range(min(self.growth_sets.loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size - 1),
+            for t in range(min(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size - 1),
                            min(t_hat + self.parameters.max_periods_deployed, self.t_size - 1))
 
         )
 
+
         self.model.addConstrs(
             # This is the constraint (5.12) - Which forces the binary employement variable to be positive if biomass is employed
-            gp.quicksum(self.x[f, t_hat, t, s] for f in range(self.f_size)) <= self.employ_bin[t, s] * self.parameters.bigM
+            gp.quicksum(self.x[l, f, t_hat, t, s] for f in range(self.f_size)) <= self.employ_bin[l, t, s] * self.parameters.bigM
+            for l in range(self.l_size)
             for s in range(self.s_size)
             for t_hat in range(self.t_size)
             for t in range(t_hat, min(t_hat + self.parameters.max_periods_deployed, self.t_size))
         )
 
+    #Fixed
     def add_MAB_requirement_constraint(self):
         self.model.addConstrs(
-            gp.quicksum(self.x[f, t_hat, t, s] for f in range(self.f_size)) <= self.site.MAB_capacity
+            gp.quicksum(self.x[l, f, t_hat, t, s] for f in range(self.f_size)) <= self.sites[l].MAB_capacity
+            for l in range(self.l_size)
             for t_hat in range(self.t_size)
             for t in range(t_hat, min(t_hat + self.parameters.max_periods_deployed, self.t_size))
             for s in range(self.s_size)
+        )
+
+    def add_MAB_company_requirement_constrain(self):
+        self.model.addConstrs(
+            self.model.addConstrs(
+                gp.quicksum(self.x[l, f, t_hat, t, s] for f in range(self.f_size) for l in range(self.l_size)) <= self.parameters.MAB_company_limit
+                for t_hat in range(self.t_size)
+                for t in range(t_hat, min(t_hat + self.parameters.max_periods_deployed, self.t_size))
+                for s in range(self.s_size)
+            )
+
         )
 
     def add_initial_condition_constraint(self): #TODO: Add initial constraints
-        if self.site.init_biomass_at_site:
-            self.model.addConstr(
-                self.y[0,0] == self.site.init_biomass,
-                name="Initial Condition"
-            )
+        for l in range(self.l_size):
+            if self.sites[l].init_biomass_at_site:
+                self.model.addConstr(
+                    self.y[l,0,0] == self.sites[l].init_biomass,
+                    name="Initial Condition"
+                )
 
     def add_forcing_constraints(self):
         self.model.addConstrs(
             # TODO:This is a forcing constraint that is not in the mathematical model, put it in the model somehow
-            self.w[f, t_hat, t, s] == 0
+            self.w[l,f, t_hat, t, s] == 0
+            for l in range(self.l_size)
             for f in range(self.f_size)
             for t_hat in range(self.t_size)
             for s in range(self.s_size)
-            for t in range(0, min(self.growth_sets.loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size))
+            for t in range(0, min(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size))
         )
 
         self.model.addConstrs(
             # TODO:This is a second forcing constraint that is not in the mathematical model, put it in the model somehow
-            self.w[f, t_hat, t, s] == 0
+            self.w[l, f, t_hat, t, s] == 0
+            for l in range(self.l_size)
             for f in range(self.f_size)
             for t_hat in range(self.t_size)
             for t in range(min(t_hat + self.parameters.max_periods_deployed, self.t_size), self.t_size)

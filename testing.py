@@ -16,9 +16,23 @@ site_16 = Site(
     site_name="HAUKØYA Ø",
 )
 
-
-mon_test = MonolithicProblem(
-    [site_16]
+site_12 = Site(
+    scenario_temperatures=scenarios_test.scenario_temperatures_per_site_df.loc[area_senja_string],
+    MAB_capacity=3600*1000,
+    init_biomass=3536 * 1000,
+    init_avg_weight=6536,
+    init_biomass_months_deployed=18,
+    site_name="FLESEN"
 )
 
-#mon_test.solve_and_print_model()
+site_13 = Site(
+    scenario_temperatures=scenarios_test.scenario_temperatures_per_site_df.loc[area_senja_string],
+    MAB_capacity=3900*1000,
+    site_name="KVENBUKTA V"
+)
+
+mon_test = MonolithicProblem(
+    [site_16, site_12, site_13]
+)
+
+mon_test.solve_and_print_model()
