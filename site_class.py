@@ -119,7 +119,7 @@ class Site:
                     break
                 #If harvest is not allowed until after the end of the planning horizon, we set the growth set to be the maximum + 1
                 elif j == len(weight_dev_df_single_scenario_and_weight.iloc[i]) -1:
-                    growth_set_array.append(59)
+                    growth_set_array.append(60)
 
         return growth_set_array
 

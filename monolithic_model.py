@@ -60,6 +60,7 @@ class MonolithicProblem:
         self.add_forcing_constraints()
         self.add_MAB_company_requirement_constraint()
         self.add_end_of_horizon_constraint()
+        #self.add_x_forcing_constraint()
         #self.add_up_branching_constraints()
         #self.add_down_branching_constraints()
 
@@ -109,7 +110,7 @@ class MonolithicProblem:
 
 
     def declare_variables(self):
-        self.x = self.model.addVars(self.l_size, self.f_size, self.t_size, self.t_size, self.s_size, vtype=GRB.CONTINUOUS, lb=0)
+        self.x = self.model.addVars(self.l_size, self.f_size, self.t_size, self.t_size +1, self.s_size, vtype=GRB.CONTINUOUS, lb=0)
         self.y = self.model.addVars(self.l_size, self.f_size, self.t_size, vtype=GRB.CONTINUOUS, lb=0)
         self.w = self.model.addVars(self.l_size, self.f_size, self.t_size, self.t_size, self.s_size, vtype=GRB.CONTINUOUS, lb=0)
 
@@ -129,8 +130,8 @@ class MonolithicProblem:
                     for l in range(self.l_size)
                     for f in range(self.f_size)
                     for t_hat in range(self.t_size)
-                    for t in range(min(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size - 1),
-                           min(t_hat + self.parameters.max_periods_deployed, self.t_size - 1))
+                    for t in range(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat],
+                           min(t_hat + self.parameters.max_periods_deployed, self.t_size))
                 )
                 for s in range(self.s_size)
             )
@@ -268,6 +269,8 @@ class MonolithicProblem:
             for l in range(self.l_size)
         )
 
+
+
     def add_biomass_development_constraints(self):
         self.model.addConstrs(  # This is constraint (5.9) - which ensures that biomass x = biomass deployed y
             self.x[l, f, t, t, s] == self.y[l,f, t]
@@ -286,7 +289,7 @@ class MonolithicProblem:
             for f in range(self.f_size)
             for s in range(self.s_size)
             for t in
-            range(min(t_hat, self.t_size - 1), min(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size - 1))
+            range(min(t_hat, self.t_size), min(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size))
         )
 
         #Fixed
@@ -294,11 +297,11 @@ class MonolithicProblem:
             self.x[l, f, t_hat, t + 1, s] == (1 - self.parameters.expected_production_loss) * self.x[l,f, t_hat, t, s] *
             self.growth_factors[l].loc[(self.smolt_weights[f], f"Scenario {s}", t_hat)][t] - self.w[l,f, t_hat, t, s]
             for l in range(self.l_size)
-            for t_hat in range(self.t_size - 1)
+            for t_hat in range(self.t_size)
             for f in range(self.f_size)
             for s in range(self.s_size)
-            for t in range(min(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size - 1),
-                           min(t_hat + self.parameters.max_periods_deployed, self.t_size - 1))
+            for t in range(min(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size),
+                           min(t_hat + self.parameters.max_periods_deployed, self.t_size))
 
         )
 
@@ -334,7 +337,7 @@ class MonolithicProblem:
     def add_end_of_horizon_constraint(self):
             for s in range(self.s_size):
                 self.model.addConstr(
-                    gp.quicksum(self.x[l, f, t_hat, self.t_size -1, s] for l in range(self.l_size) for t_hat in range(self.t_size) for f in range(self.f_size))
+                    gp.quicksum(self.x[l, f, t_hat, 59, s] for l in range(self.l_size) for t_hat in range(59 - self.parameters.max_periods_deployed, 59) for f in range(self.f_size))
                     >=
                     self.parameters.eoh_down_ratio *
                     gp.quicksum(self.y[l, f, 0] for l in range(self.l_size) for f in range(self.f_size))
@@ -343,11 +346,12 @@ class MonolithicProblem:
 
             for s in range(self.s_size):
                 self.model.addConstr(
-                    gp.quicksum(self.x[l, f, t_hat, self.t_size -1, s] for l in range(self.l_size) for t_hat in range(self.t_size) for f in range(self.f_size))
+                    gp.quicksum(self.x[l, f, t_hat, 59, s] for l in range(self.l_size) for t_hat in range(59 - self.parameters.max_periods_deployed, 59) for f in range(self.f_size))
                     >=
-                    self.parameters.MAB_company_limit * 0.3
+                    self.parameters.MAB_company_limit * 0.5
                     , name="Second E0H down"
                 )
+
 
     def add_initial_condition_constraint(self): #TODO: Add initial constraints
         for l in range(self.l_size):
@@ -375,6 +379,15 @@ class MonolithicProblem:
             for f in range(self.f_size)
             for t_hat in range(self.t_size)
             for t in range(min(t_hat + self.parameters.max_periods_deployed, self.t_size), self.t_size)
+            for s in range(self.s_size)
+        )
+
+    def add_x_forcing_constraint(self):
+        self.model.addConstrs(
+            self.x[l, f, t_hat, self.t_size, s] <= self.deploy_bin[l,t_hat] * self.parameters.MAB_company_limit
+            for t_hat in range(self.t_size)
+            for l in range(self.l_size)
+            for f in range(self.f_size)
             for s in range(self.s_size)
         )
 
