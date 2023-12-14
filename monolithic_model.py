@@ -70,7 +70,8 @@ class MonolithicProblem:
         #Printing solution
         if self.model.status == GRB.OPTIMAL:
             self.print_solution_to_excel()
-            self.plot_solutions_x_values()
+            self.plot_solutions_x_values_per_site()
+            self.plot_solutions_x_values_aggregated()
             self.iterations += 1
 
 
@@ -182,28 +183,25 @@ class MonolithicProblem:
         #FIXED
         self.model.addConstrs(
             # This is the constraint (5.4) - which restricts the deployment of smolt to an upper bound, while forcing the binary deploy variable
-            gp.quicksum((self.parameters.smolt_weights[f] / 1000) * self.y[l, f, t] for f in
-                        range(self.f_size)) <= self.parameters.smolt_deployment_upper_bound * self.deploy_bin[l, t]
+            gp.quicksum(self.y[l, f, t] for f in range(self.f_size)) <= self.parameters.smolt_deployment_upper_bound * self.deploy_bin[l, t]
             # Divide by thousand, as smolt weight is given in grams, while deployed biomass is in kilos
-            for t in range(self.t_size)
+            for t in range(1, self.t_size)
             for l in range(self.l_size)
         )
 
         #FIXED
         self.model.addConstrs(
             # This is the constraint (5.4) - which restricts the deployment of smolt to a lower bound bound, while forcing the binary deploy variable
-            gp.quicksum((self.parameters.smolt_weights[f] / 1000) * self.y[l, f, t] for f in
-                        range(self.f_size)) >= self.parameters.smolt_deployment_lower_bound * self.deploy_bin[l,t]
+            gp.quicksum(self.y[l, f, t] for f in range(self.f_size)) >= self.parameters.smolt_deployment_lower_bound * self.deploy_bin[l,t]
             # Divide by thousand, as smolt weight is given in grams, while deployed biomass is in kilos
-            for t in range(self.t_size)
+            for t in range(1, self.t_size)
             for l in range(self.l_size)
         )
 
         #FIXED
         self.model.addConstrs(  # This is constraint (5.5) - setting a lower limit on smolt deployed from a single cohort
-            (self.parameters.smolt_weights[f] / 1000) * self.y[l, f, t] >= self.parameters.smolt_deployment_lower_bound * self.deploy_type_bin[l,
-                f, t]
-            for t in range(self.t_size)
+            self.y[l, f, t] >= self.parameters.smolt_deployment_lower_bound * self.deploy_type_bin[l,f, t]
+            for t in range(1, self.t_size)
             for f in range(self.f_size)
             for l in range(self.l_size)
         )
@@ -211,12 +209,45 @@ class MonolithicProblem:
         #FIXED
         self.model.addConstrs(
             # This is constraint (Currently not in model) - setting an upper limit on smolt deployed in a single cohort #TODO: Add to mathematical model
-            self.parameters.smolt_deployment_upper_bound * self.deploy_type_bin[l, f, t] >= (self.parameters.smolt_weights[f] / 1000) * self.y[l,
-                f, t]
-            for t in range(self.t_size)
+            self.parameters.smolt_deployment_upper_bound * self.deploy_type_bin[l, f, t] >=  self.y[l,f, t]
+            for t in range(1, self.t_size)
             for f in range(self.f_size)
             for l in range(self.l_size)
         )
+
+        for l in range(self.l_size):
+            if self.sites[l].init_biomass < 1:
+                self.model.addConstr(
+                    # This is the constraint (5.4) - which restricts the deployment of smolt to an upper bound, while forcing the binary deploy variable
+                    gp.quicksum(self.y[l, f, 0] for f in range(self.f_size)) <= self.parameters.smolt_deployment_upper_bound * self.deploy_bin[l, 0]
+                    ,name="Deploy limit if no init biomass at site"
+                    # Divide by thousand, as smolt weight is given in grams, while deployed biomass is in kilos
+                )
+
+                # FIXED
+                self.model.addConstr(
+                    # This is the constraint (5.4) - which restricts the deployment of smolt to a lower bound bound, while forcing the binary deploy variable
+                    gp.quicksum(self.y[l, f, 0] for f in range(self.f_size)) >= self.parameters.smolt_deployment_lower_bound * self.deploy_bin[l, 0]
+                    , name="Deploy limit if no init biomass at site"
+                    # Divide by thousand, as smolt weight is given in grams, while deployed biomass is in kilos
+                )
+
+                # FIXED
+                self.model.addConstrs(
+                    # This is constraint (5.5) - setting a lower limit on smolt deployed from a single cohort
+                    self.y[l, f, 0] >= self.parameters.smolt_deployment_lower_bound * self.deploy_type_bin[l, f, 0]
+                    for f in range(self.f_size)
+
+
+                )
+
+                # FIXED
+                self.model.addConstrs(
+                    # This is constraint (Currently not in model) - setting an upper limit on smolt deployed in a single cohort #TODO: Add to mathematical model
+                    self.parameters.smolt_deployment_upper_bound * self.deploy_type_bin[l, f, 0] >= self.y[l, f, 0]
+                    for f in range(self.f_size)
+                )
+
 
     def add_fallowing_constraints(self):
         #Fixed
@@ -415,7 +446,7 @@ class MonolithicProblem:
                 df.to_excel(f"./results/mon_site{self.sites[i].name}.xlsx", index=True)
                 i+=1
 
-    def plot_solutions_x_values(self):
+    def plot_solutions_x_values_per_site(self):
         """
         EXPLANATION: This function plots the x values, i.e the biomass at the location for every period in the planning horizion
         :return:
@@ -425,10 +456,11 @@ class MonolithicProblem:
         scenarios = self.s_size
 
         #Declaring a list for storing the x values
-        x_values = []
+
 
         #Iterating through the dataframe to sum together the biomass at location for every site
         for l in range(self.l_size):
+            x_values = []
             df = dfs[l]
             for s in range(scenarios):
                 scenarios_x_values = []
@@ -442,7 +474,7 @@ class MonolithicProblem:
                 x_values.append(scenarios_x_values)
 
             #Declaring a variable for storing the x-axis to be used in the plot
-            x_axis = np.arange(0,self.t_size +1)
+            x_axis = np.arange(0,self.t_size + 1)
 
             #Adding to the plots
             for scenario in x_values:
@@ -455,7 +487,49 @@ class MonolithicProblem:
             plt.savefig(path)
 
             plt.show()
-            plt.cla()
+            plt.clf()
+            plt.close()
+
+    def plot_solutions_x_values_aggregated(self):
+        """
+               EXPLANATION: This function plots the x values, i.e the biomass at the location for every period in the planning horizion
+               :return:
+               """
+        # Fetching the solution dataframe
+        dfs = self.get_second_stage_variables_df()
+        scenarios = self.s_size
+
+        # Declaring a list for storing the x values
+        x_values = []
+
+        # Iterating through the dataframe to sum together the biomass at location for every site
+        for l in range(self.l_size):
+            df = dfs[l]
+            for s in range(scenarios):
+                scenarios_x_values = []
+                for t in range(self.t_size + 1):
+                    x_t = 0
+                    for t_hat in range(self.t_size):
+                        for f in range(self.f_size):
+                            x_t += df.loc[(s, f, t_hat, t)]["X"] if (s, f, t_hat, t) in df.index else 0.0
+
+                    scenarios_x_values.append(x_t)
+                x_values.append(scenarios_x_values)
+
+            # Declaring a variable for storing the x-axis to be used in the plot
+            x_axis = np.arange(0, self.t_size + 1)
+
+            # Adding to the plots
+            for scenario in x_values:
+                plt.plot(x_axis, scenario)
+
+            plt.title(f"Biomass at site aggregated")
+            plt.ylabel("Biomass")
+            plt.xlabel("Periods")
+            path = f'results/plots/{self.sites[l].name}{self.iterations}.png'
+            plt.savefig(path)
+
+        plt.show()
 
     def get_deploy_period_list(self):
         deploy_periods_list = []
@@ -518,6 +592,8 @@ class MonolithicProblem:
                                 y_entry = self.y[l, f, t].X
                                 l3_data_storage.append(
                                     [x_entry, w_entry, employ_entry, harvest_entry, deploy_entry, deploy_type_entry, y_entry])
+                            if self.x[l, f, deploy_period, 60, s].x > 0:
+                                l3_data_storage.append([self.x[l, f, deploy_period, 60, s].x, 0,0,0,0,0,0])
                             columns = ["X", "W", "Employ bin", "Harvest bin", "Deploy bin", "Deploy type bin", "Y"]
                             index = [i + deploy_period for i in range(len(l3_data_storage))]
                             l2_df_storage.append(pd.DataFrame(l3_data_storage, columns=columns, index=index))
