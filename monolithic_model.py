@@ -58,6 +58,7 @@ class MonolithicProblem:
         self.add_MAB_requirement_constraint()
         self.add_initial_condition_constraint()
         self.add_forcing_constraints()
+        self.add_MAB_company_requirement_constraint()
         #self.add_up_branching_constraints()
         #self.add_down_branching_constraints()
 
@@ -67,7 +68,7 @@ class MonolithicProblem:
         #Printing solution
         if self.model.status == GRB.OPTIMAL:
             #self.print_solution_to_excel()
-            #self.plot_solutions_x_values()
+            self.plot_solutions_x_values()
             self.iterations += 1
 
         #Putting solution into variables for export
@@ -319,16 +320,17 @@ class MonolithicProblem:
             for s in range(self.s_size)
         )
 
-    def add_MAB_company_requirement_constrain(self):
+    def add_MAB_company_requirement_constraint(self):
         self.model.addConstrs(
-            self.model.addConstrs(
-                gp.quicksum(self.x[l, f, t_hat, t, s] for f in range(self.f_size) for l in range(self.l_size)) <= self.parameters.MAB_company_limit
-                for t_hat in range(self.t_size)
-                for t in range(t_hat, min(t_hat + self.parameters.max_periods_deployed, self.t_size))
-                for s in range(self.s_size)
-            )
-
+            gp.quicksum(self.x[l, f, t_hat, t, s] for f in range(self.f_size) for l in
+                        range(self.l_size)) <= self.parameters.MAB_company_limit
+            for t_hat in range(self.t_size)
+            for t in range(t_hat, min(t_hat + self.parameters.max_periods_deployed, self.t_size))
+            for s in range(self.s_size)
         )
+
+
+
 
     def add_initial_condition_constraint(self): #TODO: Add initial constraints
         for l in range(self.l_size):
@@ -386,45 +388,48 @@ class MonolithicProblem:
         :return:
         """
         #Fetching the solution dataframe
-        df = self.get_second_stage_variables_df()
-        scenarios = df.index.get_level_values("Scenario").unique()
+        dfs = self.get_second_stage_variables_df()
+        scenarios = self.s_size
 
         #Declaring a list for storing the x values
         x_values = []
 
         #Iterating through the dataframe to sum together the biomass at location for every site
-        for s in scenarios:
-            scenarios_x_values = []
-            for t in range(self.t_size):
-                x_t = 0
-                for t_hat in range(self.t_size):
-                    for f in range(self.f_size):
-                        x_t += df.loc[(s, f, t_hat, t)]["X"] if (s, f, t_hat, t) in df.index else 0.0
+        for l in range(self.l_size):
+            df = dfs[l]
+            for s in range(scenarios):
+                scenarios_x_values = []
+                for t in range(self.t_size):
+                    x_t = 0
+                    for t_hat in range(self.t_size):
+                        for f in range(self.f_size):
+                            x_t += df.loc[(s, f, t_hat, t)]["X"] if (s, f, t_hat, t) in df.index else 0.0
 
-                scenarios_x_values.append(x_t)
-            x_values.append(scenarios_x_values)
+                    scenarios_x_values.append(x_t)
+                x_values.append(scenarios_x_values)
 
-        #Declaring a variable for storing the x-axis to be used in the plot
-        x_axis = np.arange(0,self.t_size)
+            #Declaring a variable for storing the x-axis to be used in the plot
+            x_axis = np.arange(0,self.t_size)
 
-        #Adding to the plots
-        for scenario in x_values:
-            plt.plot(x_axis, scenario)
+            #Adding to the plots
+            for scenario in x_values:
+                plt.plot(x_axis, scenario)
 
-        plt.title(f"Biomass at site {self.site.name} iteration {self.iterations}")
-        plt.ylabel("Biomass")
-        plt.xlabel("Periods")
-        path = f'results/plots/{self.site.name}{self.iterations}.png'
-        plt.savefig(path)
+            plt.title(f"Biomass at site {self.sites[l].name} iteration {self.iterations}")
+            plt.ylabel("Biomass")
+            plt.xlabel("Periods")
+            path = f'results/plots/{self.sites[l].name}{self.iterations}.png'
+            plt.savefig(path)
 
-        plt.show()
-
-
-        pass
+            plt.show()
+            plt.cla()
 
     def get_deploy_period_list(self):
-        deploy_period_list = [i for i in range(0, self.t_size) if self.deploy_bin[i].x == 1]
-        return deploy_period_list
+        deploy_periods_list = []
+        for l in range(self.l_size):
+            deploy_period_list_l = [i for i in range(0, self.t_size) if self.deploy_bin[l,i].x == 1]
+            deploy_periods_list.append(deploy_period_list_l)
+        return deploy_periods_list
 
     def get_deploy_period_list_per_cohort(self):
         data_storage =[]
@@ -455,49 +460,49 @@ class MonolithicProblem:
         if self.model.status != GRB.OPTIMAL:
             return pd.DataFrame()
 
-        deploy_period_list = self.get_deploy_period_list()
+        deploy_periods_list = self.get_deploy_period_list()
 
 
         try:
-            df_storage = []
-            for s in range(self.s_size):
-                l1_df_storage = []
-                for f in range(self.f_size):
-                    l2_df_storage = []
-                    for deploy_period in deploy_period_list:
-                        l3_data_storage = []
-                        for t in range(deploy_period,
-                                       min(deploy_period + self.parameters.max_periods_deployed, self.t_size)):
-                            x_entry = self.x[f, deploy_period, t, s].x
-                            w_entry = self.w[f, deploy_period, t, s].x
-                            employ_entry = self.employ_bin[t, s].x
-                            harvest_entry = self.harvest_bin[t, s].x
-                            deploy_entry = self.deploy_bin[t].x
-                            deploy_type_entry = self.deploy_type_bin[f, t].x
-                            l3_data_storage.append(
-                                [x_entry, w_entry, employ_entry, harvest_entry, deploy_entry, deploy_type_entry])
-                        columns = ["X", "W", "Employ bin", "Harvest bin", "Deploy bin", "Deploy type bin"]
-                        index = [i + deploy_period for i in range(len(l3_data_storage))]
-                        l2_df_storage.append(pd.DataFrame(l3_data_storage, columns=columns, index=index))
-                    keys_l2 = [i for i in deploy_period_list]
-                    l1_df_storage.append(pd.concat(l2_df_storage, keys=keys_l2))
-                keys_l1 = [i for i in range(len(l1_df_storage))]
-                df_storage.append(pd.concat(l1_df_storage, keys=keys_l1))
-            keys = [i for i in range(len(df_storage))]
-            df = pd.concat(df_storage, keys=keys)
+            deploy_period_dfs = []
+            for l in range(self.l_size):
+                deploy_period_list = deploy_periods_list[l]
+                df_storage = []
+                for s in range(self.s_size):
+                    l1_df_storage = []
+                    for f in range(self.f_size):
+                        l2_df_storage = []
+                        for deploy_period in deploy_period_list:
+                            l3_data_storage = []
+                            for t in range(deploy_period,
+                                           min(deploy_period + self.parameters.max_periods_deployed, self.t_size)):
+                                x_entry = self.x[l, f, deploy_period, t, s].x
+                                w_entry = self.w[l, f, deploy_period, t, s].x
+                                employ_entry = self.employ_bin[l, t, s].x
+                                harvest_entry = self.harvest_bin[l, t, s].x
+                                deploy_entry = self.deploy_bin[l, t].x
+                                deploy_type_entry = self.deploy_type_bin[l, f, t].x
+                                l3_data_storage.append(
+                                    [x_entry, w_entry, employ_entry, harvest_entry, deploy_entry, deploy_type_entry])
+                            columns = ["X", "W", "Employ bin", "Harvest bin", "Deploy bin", "Deploy type bin"]
+                            index = [i + deploy_period for i in range(len(l3_data_storage))]
+                            l2_df_storage.append(pd.DataFrame(l3_data_storage, columns=columns, index=index))
+                        keys_l2 = [i for i in deploy_period_list]
+                        l1_df_storage.append(pd.concat(l2_df_storage, keys=keys_l2))
+                    keys_l1 = [i for i in range(len(l1_df_storage))]
+                    df_storage.append(pd.concat(l1_df_storage, keys=keys_l1))
+                keys = [i for i in range(len(df_storage))]
+                df = pd.concat(df_storage, keys=keys)
 
-            df.index.names = ["Scenario", "Smolt type", "Deploy period", "Period"]
+                df.index.names = ["Scenario", "Smolt type", "Deploy period", "Period"]
 
-            self.second_stage_variables = df
+                deploy_period_dfs.append(df)
 
-            return df
+            return deploy_period_dfs
         except:
             print("Exception")
             return pd.DataFrame()
 
-        else:
-            print("Exception")
-            return pd.DataFrame()
 
 
 
