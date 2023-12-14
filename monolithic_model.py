@@ -13,25 +13,25 @@ class MonolithicProblem:
 
 
     def __init__(self,
-                 site_obj,
+                 site_objects,
                  MAB_shadow_prices_df = pd.DataFrame()
                  ):
         #Imported classes, containing parameters and data
         self.input_data = InputData()
         self.parameters = GlobalParameters()
         self.scenario = Scenarios(self.input_data.temperatures_df)
-        self.site = site_obj
+        self.sites = site_objects
 
         #Setting variables to contain the size of sets
         self.f_size = 1  #TODO: declare using the smolt set
         self.t_size = self.parameters.number_periods
         self.s_size = 5  #TODO: len(parameters.scenario_probabilities)
+        self.l_size = len(self.sites)
 
         #Defining some variables from the data objects for easier reference
-        self.growth_factors = self.site.growth_per_scenario_df
+        self.growth_factors = [site.growth_per_scenario_df for site in site_objects]
         self.smolt_weights = self.parameters.smolt_weights
-        self.growth_sets = self.site.growth_sets
-        self.site = site_obj
+        self.growth_sets = [site.growth_sets for site in site_objects]
         self.MAB_shadow_prices_df = MAB_shadow_prices_df
 
         #Defining some instance attributes:
@@ -106,15 +106,15 @@ class MonolithicProblem:
 
 
     def declare_variables(self):
-        self.x = self.model.addVars(self.f_size, self.t_size, self.t_size, self.s_size, vtype=GRB.CONTINUOUS, lb=0)
-        self.y = self.model.addVars(self.f_size, self.t_size, vtype=GRB.CONTINUOUS, lb=0)
-        self.w = self.model.addVars(self.f_size, self.t_size, self.t_size, self.s_size, vtype=GRB.CONTINUOUS, lb=0)
+        self.x = self.model.addVars(self.l_size, self.f_size, self.t_size, self.t_size, self.s_size, vtype=GRB.CONTINUOUS, lb=0)
+        self.y = self.model.addVars(self.l_size, self.f_size, self.t_size, vtype=GRB.CONTINUOUS, lb=0)
+        self.w = self.model.addVars(self.l_size, self.f_size, self.t_size, self.t_size, self.s_size, vtype=GRB.CONTINUOUS, lb=0)
 
         # Declaring the binary decision variables
-        self.deploy_type_bin = self.model.addVars(self.f_size, self.t_size, vtype=GRB.BINARY)
-        self.deploy_bin = self.model.addVars(self.t_size, vtype=GRB.BINARY)
-        self.harvest_bin = self.model.addVars(self.t_size, self.s_size, vtype=GRB.BINARY)
-        self.employ_bin = self.model.addVars(self.t_size, self.s_size, vtype=GRB.BINARY)
+        self.deploy_type_bin = self.model.addVars(self.l_size, self.f_size, self.t_size, vtype=GRB.BINARY)
+        self.deploy_bin = self.model.addVars(self.l_size, self.t_size, vtype=GRB.BINARY)
+        self.harvest_bin = self.model.addVars(self.l_size, self.t_size, self.s_size, vtype=GRB.BINARY)
+        self.employ_bin = self.model.addVars(self.l_size, self.t_size, self.s_size, vtype=GRB.BINARY)
 
     def set_objective(self):
         self.model.setObjective(  # This is the objective (5.2) - which represents the objective for biomass maximization

@@ -18,7 +18,7 @@ site_16 = Site(
 
 
 mon_test = MonolithicProblem(
-    site_16
+    [site_16]
 )
 
-mon_test.solve_and_print_model()
+#mon_test.solve_and_print_model()
