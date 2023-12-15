@@ -13,14 +13,14 @@ class SubProblem:
 
 
     def __init__(self,
-                 site_obj,
+                 site_objects,
                  MAB_shadow_prices_df = pd.DataFrame()
                  ):
         #Imported classes, containing parameters and data
         self.input_data = InputData()
         self.parameters = GlobalParameters()
         self.scenario = Scenarios(self.input_data.temperatures_df)
-        self.site = site_obj
+        self.site = site_objects
 
         #Setting variables to contain the size of sets
         self.f_size = 1  #TODO: declare using the smolt set
@@ -31,7 +31,7 @@ class SubProblem:
         self.growth_factors = self.site.growth_per_scenario_df
         self.smolt_weights = self.parameters.smolt_weights
         self.growth_sets = self.site.growth_sets
-        self.site = site_obj
+        self.site = site_objects
         self.MAB_shadow_prices_df = MAB_shadow_prices_df
 
         #Defining some instance attributes:

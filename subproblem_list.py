@@ -138,9 +138,9 @@ medium_sites_list = [site_3, site_4, site_6, site_7, site_8,
 short_sites_list = [site_4, site_6,  site_15]
 
 
-sub_problem_list = [SubProblem(site_obj=site) for site in sites_list]
-medium_sub_problem_list = [SubProblem(site_obj=site) for site in medium_sites_list]
-short_sub_problem_list = [SubProblem(site_obj=site) for site in short_sites_list]
+sub_problem_list = [SubProblem(site_objects=site) for site in sites_list]
+medium_sub_problem_list = [SubProblem(site_objects=site) for site in medium_sites_list]
+short_sub_problem_list = [SubProblem(site_objects=site) for site in short_sites_list]
 
 
 short_node_init_list = [[2,0]]

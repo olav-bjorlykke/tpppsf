@@ -376,7 +376,7 @@ class MonolithicProblem:
                 for s in range(self.s_size):
                     self.model.addConstr(
                         gp.quicksum(self.x[l, f, t_hat, t, s] for l in range(self.l_size) for t_hat in range(t) for f in range(self.f_size))
-                         <= 4000 * 1000
+                         <= configs.MAB_COMPANY_LIMIT
                         , name="company MAB limit"
                     )
 
@@ -638,14 +638,17 @@ class MonolithicProblem:
         return deploy_period_dfs
 
 
-
-
-
-
-
-
-
     def set_shadow_prices_df(self, shadow_prices_df):
         self.MAB_shadow_prices_df = shadow_prices_df
+
+
+    def call_back_for_init_column(self, model, where):
+        if where == GRB.Callback.MIPSOL:
+            # This callback is called each time an integer feasible solution is found
+            gap = model.cbGet(GRB.Callback.MIPSOL_OBJBND) - model.cbGet(GRB.Callback.MIPSOL_OBJBST)
+            if gap < model.cbGet(GRB.Callback.MIPSOL_OBJBST):
+                print("Stopping optimization: Gap < 100%")
+                model.terminate()
+
 
 
