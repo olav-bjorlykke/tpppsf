@@ -395,10 +395,15 @@ class MonolithicProblem:
 
     def add_initial_condition_constraint(self): #TODO: Add initial constraints
         for l in range(self.l_size):
-            if self.sites[l].init_biomass_at_site:
+            if self.sites[l].init_biomass > 1:
                 self.model.addConstr(
                     self.y[l,0,0] == self.sites[l].init_biomass,
+
                     name="Initial Condition"
+                )
+                self.model.addConstr(
+                    self.deploy_bin[l,0] == 1,
+                    name="Initial Condition bin"
                 )
 
     def add_forcing_constraints(self):
