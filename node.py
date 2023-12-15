@@ -2,6 +2,7 @@ import pandas as pd
 from master_problem import MasterProblem
 from gurobipy import GRB
 from archive.zero_column import do_nothing_column
+import configs
 
 
 
@@ -24,22 +25,11 @@ class Node:
 
     def generate_initial_columns(self): #TODO: set to get initial column from generated column
         #Storage for the dataframes containing the sub problem results
-        new_column = []
-        #Iterating through every column in the subproblems list
-        for sub_problem in self.sub_problems:
-            if sub_problem.site.init_biomass > 1:
-                # Solving the sub problem
-                sub_problem.create_zero_columns()
-                # Adding the results df from the solved model to the list
-                new_column.append(sub_problem.get_second_stage_variables_df())
-
-            else:
-                new_column.append(do_nothing_column)
+        initial_column = pd.read_csv(f"./init_columns/column_s{configs.NUM_SCENARIOS}_l{configs.NUM_LOCATIONS}.csv"
+                                     ,index_col=["Location", "Scenario", "Smolt type", "Deploy period", "Period"])
+        return initial_column
 
 
-        #Concatinating the results dataframe from every location to one multiindex dataframe
-        new_column_df = pd.concat(new_column, keys=[i for i in range(len(new_column))])
-        return new_column_df
 
     def solve_sub_problems(self):
         for sub_problem in self.sub_problems:
