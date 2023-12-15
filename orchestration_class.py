@@ -31,7 +31,7 @@ class Orchestration:
         init_node_label = NodeLabel(
             iterations_number=0,
             parent=None,
-            up_list=subproblem_list.short_node_init_list,
+            up_list=subproblem_list.NODE_INIT_LIST,
             down_list = [],
             parent_feasible_solution=0,
             parent_iteration=0

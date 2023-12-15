@@ -1,8 +1,7 @@
 import pandas as pd
 from master_problem import MasterProblem
-import gurobipy as gp
 from gurobipy import GRB
-from zero_column import do_nothing_column
+from archive.zero_column import do_nothing_column
 
 
 
@@ -23,7 +22,7 @@ class Node:
 
 
 
-    def generate_initial_columns(self):
+    def generate_initial_columns(self): #TODO: set to get initial column from generated column
         #Storage for the dataframes containing the sub problem results
         new_column = []
         #Iterating through every column in the subproblems list

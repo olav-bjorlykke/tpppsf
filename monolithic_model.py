@@ -7,6 +7,7 @@ from input_data import InputData
 from site_class import Site
 from scenarios import Scenarios
 import matplotlib.pyplot as plt
+import configs
 
 class MonolithicProblem:
     iterations = 0
@@ -32,7 +33,7 @@ class MonolithicProblem:
         #Setting variables to contain the size of sets
         self.f_size = 1  #TODO: declare using the smolt set
         self.t_size = self.parameters.number_periods
-        self.s_size = 5  #TODO: len(parameters.scenario_probabilities)
+        self.s_size = configs.NUM_SCENARIOS  #TODO: len(parameters.scenario_probabilities)
         self.l_size = len(self.sites)
 
         #Defining some variables from the data objects for easier reference
@@ -68,8 +69,8 @@ class MonolithicProblem:
         self.add_MAB_company_requirement_constraint()
         self.add_end_of_horizon_constraint()
         #self.add_x_forcing_constraint()
-        #self.add_up_branching_constraints()
-        #self.add_down_branching_constraints()
+        self.add_up_branching_constraints()
+        self.add_down_branching_constraints()
 
         #Running gurobi to optimize model
         self.model.optimize()

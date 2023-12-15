@@ -13,7 +13,7 @@ from orchestration_class import Orchestration
 
 
 orchestration = Orchestration(
-    subproblems=subproblem_list.short_sub_problem_list
+    subproblems=subproblem_list.SUB_PROBLEM_LIST
 )
 
 orchestration.run_branching_algorithm()
