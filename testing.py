@@ -38,15 +38,11 @@ site_13 = Site(
 )
 
 mon_test = MonolithicProblem(
-    [site_12, site_4]
+    [site_12, site_4, site_13]
 )
 
-site_12.weight_dev_per_scenario_df.to_excel("./results/weight_scenario.xlsx")
-site_12.growth_per_scenario_df.to_excel("./results/growth_scenario.xlsx")
-site_12.growth_sets.to_excel("./results/growth_set.xlsx")
 mon_test.create_initial_columns()
 
-mon_test.print_solution_to_csv("test_csv.csv")
-
-test_df = mon_test.get_solution_from_csv("test_csv.csv")
+test_df = mon_test.get_solution_df_from_csv("./init_columns/column_s2_l2.csv")
+print(test_df.head(n=5))
 test_df.to_excel("test_csv_excel.xlsx")

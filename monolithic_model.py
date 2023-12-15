@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 class MonolithicProblem:
     iterations = 0
     solution_index_names = ["Scenario", "Smolt type", "Deploy period", "Period"]
+    column_index_names = ["Location", "Scenario", "Smolt type", "Deploy period", "Period"]
 
 
     def __init__(self,
@@ -26,7 +27,7 @@ class MonolithicProblem:
         #Setting variables to contain the size of sets
         self.f_size = 1  #TODO: declare using the smolt set
         self.t_size = self.parameters.number_periods
-        self.s_size = 2  #TODO: len(parameters.scenario_probabilities)
+        self.s_size = 5  #TODO: len(parameters.scenario_probabilities)
         self.l_size = len(self.sites)
 
         #Defining some variables from the data objects for easier reference
@@ -112,7 +113,7 @@ class MonolithicProblem:
 
         # Printing solution
         if self.model.status != GRB.INFEASIBLE:
-
+            self.print_solution_to_csv()
             self.print_solution_to_excel()
             self.plot_solutions_x_values_per_site()
             self.plot_solutions_x_values_aggregated()
@@ -452,15 +453,14 @@ class MonolithicProblem:
                 df.to_excel(f"./results/mon_site{self.sites[i].name}.xlsx", index=True)
                 i+=1
 
-    def print_solution_to_csv(self, path):
+    def print_solution_to_csv(self):
         if self.model.status != GRB.INFEASIBLE:
-            i = 0
-            for df in self.get_second_stage_variables_df():
-                df.to_csv(path, index=True)
-                i += 1
+            export_df = pd.concat(self.get_second_stage_variables_df(), keys=[i for i in range(self.l_size)])
+            export_df.index.names = self.column_index_names
+            export_df.to_csv(f"./init_columns/column_s{self.s_size}_l{self.l_size}.csv")
 
-    def get_solution_from_csv(self, path):
-        df = pd.read_csv(path, index_col=self.solution_index_names)
+    def get_solution_df_from_csv(self, path):
+        df = pd.read_csv(path, index_col=self.column_index_names)
         return df
 
 
