@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 class MonolithicProblem:
     iterations = 0
+    solution_index_names = ["Scenario", "Smolt type", "Deploy period", "Period"]
 
 
     def __init__(self,
@@ -77,14 +78,19 @@ class MonolithicProblem:
 
         #Putting solution into variables for export
 
-    def create_zero_columns(self):
-        self.model = gp.Model(f"Single site solution {self.site.name}")
+    def create_initial_columns(self):
+        self.model = gp.Model(f"Find feasible solution")
+
+        #Telling the model to focus on finding a feasible solution
+        self.model.setParam("MIPFocus", 1)
+        #Stopping the model after one feasible solution is found
+        self.model.setParam("TimeLimit", 10)
 
         # Declaing variables
         self.declare_variables()
 
         # Setting objective
-        self.set_zero_ojective()
+        self.set_objective()
 
         # Adding constraints
         self.add_smolt_deployment_constraints()
@@ -95,25 +101,27 @@ class MonolithicProblem:
         self.add_MAB_requirement_constraint()
         self.add_initial_condition_constraint()
         self.add_forcing_constraints()
-        self.add_up_branching_constraints()
-        self.add_down_branching_constraints()
+        self.add_MAB_company_requirement_constraint()
+        self.add_end_of_horizon_constraint()
+        # self.add_x_forcing_constraint()
+        # self.add_up_branching_constraints()
+        # self.add_down_branching_constraints()
 
         # Running gurobi to optimize model
         self.model.optimize()
 
         # Printing solution
-        if self.model.status == GRB.OPTIMAL:
-            # self.print_solution_to_excel()
-            # self.plot_solutions_x_values()
+        if self.model.status != GRB.INFEASIBLE:
+
+            self.print_solution_to_excel()
+            self.plot_solutions_x_values_per_site()
+            self.plot_solutions_x_values_aggregated()
             self.iterations += 1
 
-        # Putting solution into variables for export
-
-
     def declare_variables(self):
-        self.x = self.model.addVars(self.l_size, self.f_size, self.t_size, self.t_size +1, self.s_size, vtype=GRB.CONTINUOUS, lb=0)
-        self.y = self.model.addVars(self.l_size, self.f_size, self.t_size, vtype=GRB.CONTINUOUS, lb=0)
-        self.w = self.model.addVars(self.l_size, self.f_size, self.t_size, self.t_size, self.s_size, vtype=GRB.CONTINUOUS, lb=0)
+        self.x = self.model.addVars(self.l_size, self.f_size, self.t_size, self.t_size +1, self.s_size, vtype=GRB.CONTINUOUS, lb=0, name="X")
+        self.y = self.model.addVars(self.l_size, self.f_size, self.t_size, vtype=GRB.CONTINUOUS, lb=0, name="y")
+        self.w = self.model.addVars(self.l_size, self.f_size, self.t_size, self.t_size, self.s_size, vtype=GRB.CONTINUOUS, lb=0, name="W")
 
         # Declaring the binary decision variables
         self.deploy_type_bin = self.model.addVars(self.l_size, self.f_size, self.t_size, vtype=GRB.BINARY)
@@ -438,13 +446,23 @@ class MonolithicProblem:
             )
 
     def print_solution_to_excel(self):
-        data_list = []
-
-        if self.model.status == GRB.OPTIMAL:
+        if self.model.status != GRB.INFEASIBLE:
             i = 0
             for df in self.get_second_stage_variables_df():
                 df.to_excel(f"./results/mon_site{self.sites[i].name}.xlsx", index=True)
                 i+=1
+
+    def print_solution_to_csv(self, path):
+        if self.model.status != GRB.INFEASIBLE:
+            i = 0
+            for df in self.get_second_stage_variables_df():
+                df.to_csv(path, index=True)
+                i += 1
+
+    def get_solution_from_csv(self, path):
+        df = pd.read_csv(path, index_col=self.solution_index_names)
+        return df
+
 
     def plot_solutions_x_values_per_site(self):
         """
@@ -452,9 +470,10 @@ class MonolithicProblem:
         :return:
         """
         #Fetching the solution dataframe
+
         dfs = self.get_second_stage_variables_df()
         scenarios = self.s_size
-
+        print(dfs)
         #Declaring a list for storing the x values
 
 
@@ -564,54 +583,52 @@ class MonolithicProblem:
         It iterates through all non-zero variables and writes the variables for X, W, Employ_bin and Harvest_bin to a ginormous dataframe
         Please don't touch it
         """
-        if self.model.status != GRB.OPTIMAL:
-            return pd.DataFrame()
+
 
         deploy_periods_list = self.get_deploy_period_list()
 
+        deploy_period_dfs = []
+        for l in range(self.l_size):
+            deploy_period_list = deploy_periods_list[l]
+            df_storage = []
+            for s in range(self.s_size):
+                l1_df_storage = []
+                for f in range(self.f_size):
+                    l2_df_storage = []
+                    for deploy_period in deploy_period_list:
+                        l3_data_storage = []
+                        for t in range(deploy_period, min(deploy_period + self.parameters.max_periods_deployed, self.t_size)):
+                            x_entry = self.x[l, f, deploy_period, t, s].x
+                            w_entry = self.w[l, f, deploy_period, t, s].x
+                            employ_entry = self.employ_bin[l, t, s].x
+                            harvest_entry = self.harvest_bin[l, t, s].x
+                            deploy_entry = self.deploy_bin[l, t].x
+                            deploy_type_entry = self.deploy_type_bin[l, f, t].x
+                            y_entry = self.y[l, f, t].X
+                            l3_data_storage.append(
+                                [x_entry, w_entry, employ_entry, harvest_entry, deploy_entry, deploy_type_entry,
+                                 y_entry])
+                        if self.x[l, f, deploy_period, 60, s].x > 0:
+                            l3_data_storage.append([self.x[l, f, deploy_period, 60, s].x, 0, 0, 0, 0, 0, 0])
+                        columns = ["X", "W", "Employ bin", "Harvest bin", "Deploy bin", "Deploy type bin", "Y"]
+                        index = [i + deploy_period for i in range(len(l3_data_storage))]
+                        l2_df_storage.append(pd.DataFrame(l3_data_storage, columns=columns, index=index))
+                    keys_l2 = [i for i in deploy_period_list]
+                    l1_df_storage.append(pd.concat(l2_df_storage, keys=keys_l2))
+                keys_l1 = [i for i in range(len(l1_df_storage))]
+                df_storage.append(pd.concat(l1_df_storage, keys=keys_l1))
+            keys = [i for i in range(len(df_storage))]
+            df = pd.concat(df_storage, keys=keys)
 
-        try:
-            deploy_period_dfs = []
-            for l in range(self.l_size):
-                deploy_period_list = deploy_periods_list[l]
-                df_storage = []
-                for s in range(self.s_size):
-                    l1_df_storage = []
-                    for f in range(self.f_size):
-                        l2_df_storage = []
-                        for deploy_period in deploy_period_list:
-                            l3_data_storage = []
-                            for t in range(deploy_period,
-                                           min(deploy_period + self.parameters.max_periods_deployed, self.t_size)):
-                                x_entry = self.x[l, f, deploy_period, t, s].x
-                                w_entry = self.w[l, f, deploy_period, t, s].x
-                                employ_entry = self.employ_bin[l, t, s].x
-                                harvest_entry = self.harvest_bin[l, t, s].x
-                                deploy_entry = self.deploy_bin[l, t].x
-                                deploy_type_entry = self.deploy_type_bin[l, f, t].x
-                                y_entry = self.y[l, f, t].X
-                                l3_data_storage.append(
-                                    [x_entry, w_entry, employ_entry, harvest_entry, deploy_entry, deploy_type_entry, y_entry])
-                            if self.x[l, f, deploy_period, 60, s].x > 0:
-                                l3_data_storage.append([self.x[l, f, deploy_period, 60, s].x, 0,0,0,0,0,0])
-                            columns = ["X", "W", "Employ bin", "Harvest bin", "Deploy bin", "Deploy type bin", "Y"]
-                            index = [i + deploy_period for i in range(len(l3_data_storage))]
-                            l2_df_storage.append(pd.DataFrame(l3_data_storage, columns=columns, index=index))
-                        keys_l2 = [i for i in deploy_period_list]
-                        l1_df_storage.append(pd.concat(l2_df_storage, keys=keys_l2))
-                    keys_l1 = [i for i in range(len(l1_df_storage))]
-                    df_storage.append(pd.concat(l1_df_storage, keys=keys_l1))
-                keys = [i for i in range(len(df_storage))]
-                df = pd.concat(df_storage, keys=keys)
+            df.index.names = self.solution_index_names
 
-                df.index.names = ["Scenario", "Smolt type", "Deploy period", "Period"]
+            deploy_period_dfs.append(df)
 
-                deploy_period_dfs.append(df)
+        return deploy_period_dfs
 
-            return deploy_period_dfs
-        except:
-            print("Exception, Dataframe not created")
-            return pd.DataFrame()
+
+
+
 
 
 
