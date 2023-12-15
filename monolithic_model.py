@@ -371,7 +371,7 @@ class MonolithicProblem:
         )
 
     def add_MAB_company_requirement_constraint(self):
-            for t in range(self.t_size):
+            for t in range(self.t_size + 1):
                 for s in range(self.s_size):
                     self.model.addConstr(
                         gp.quicksum(self.x[l, f, t_hat, t, s] for l in range(self.l_size) for t_hat in range(t) for f in range(self.f_size))
