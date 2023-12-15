@@ -22,7 +22,12 @@ class MonolithicProblem:
         self.input_data = InputData()
         self.parameters = GlobalParameters()
         self.scenario = Scenarios(self.input_data.temperatures_df)
-        self.sites = site_objects
+
+        if isinstance(site_objects,list):
+            self.sites = site_objects
+        else:
+            self.sites = [site_objects]
+
 
         #Setting variables to contain the size of sets
         self.f_size = 1  #TODO: declare using the smolt set
@@ -31,9 +36,9 @@ class MonolithicProblem:
         self.l_size = len(self.sites)
 
         #Defining some variables from the data objects for easier reference
-        self.growth_factors = [site.growth_per_scenario_df for site in site_objects]
+        self.growth_factors = [site.growth_per_scenario_df for site in self.sites]
         self.smolt_weights = self.parameters.smolt_weights
-        self.growth_sets = [site.growth_sets for site in site_objects]
+        self.growth_sets = [site.growth_sets for site in self.sites]
         self.MAB_shadow_prices_df = MAB_shadow_prices_df
 
         #Defining some instance attributes:
