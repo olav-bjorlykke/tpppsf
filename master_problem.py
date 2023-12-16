@@ -83,6 +83,7 @@ class MasterProblem:
     FUNCTIONS FOR RUNNING THE MODEL
     """
     def run_MIP_problem(self):
+        print("########  MIP problem ##########")
         self.model = gp.Model(f"Master Problem {self.iterations_k}")
 
         # Set sets and declare variables
@@ -95,6 +96,7 @@ class MasterProblem:
         # Add constraints to the mode
         self.add_convexity_constraint()
         self.add_MAB_constraint()
+        self.add_EOH_constraint()
         self.add_binary_variable_tracking_constraints()
 
         # Add branching constraints to the model
@@ -117,8 +119,10 @@ class MasterProblem:
         Runs the optimization problem and prints the solution to the terminal
         :return:
         """
+        print("######### MASTER PROBLEM ##########")
         #Declare model
         self.model = gp.Model(f"Master Problem {self.iterations_k}")
+        self.model.setParam("NumericFocus", 2)
 
         #Set sets and declare variables
         self.set_sets()
@@ -130,6 +134,7 @@ class MasterProblem:
         #Add constraints to the mode
         self.add_convexity_constraint()
         self.add_MAB_constraint()
+        self.add_EOH_constraint()
         self.add_binary_variable_tracking_constraints()
 
         #Add branching constraints to the model
@@ -144,6 +149,7 @@ class MasterProblem:
 
         #Print solution
         self.print_solution()
+        self.columns.to_excel(f"./output/column{len(self.iterations_k)}.xlsx")
 
         #Check if we have reached optimality for the LP relaxed problem, or if two columns are the same
         self.check_optimality()
@@ -193,10 +199,7 @@ class MasterProblem:
         Sets the objective function for the model - chapter 6.3 in Bjorlykke & Vassbotten
         :return:
         """
-        if self.iterations < 0:
-            self.set_objective_with_penalty_var()
-        else:
-            self.set_true_objective()
+        self.set_true_objective()
 
     def set_true_objective(self):
         self.model.setObjective(
@@ -254,26 +257,15 @@ class MasterProblem:
         Adds the convecity constraint, see chapter 6.3 in Bjorlykke and Vasbotten for mathematical description
         :return:
         """
-        if self.iterations < 10:
-            for l in self.locations_l:
-                self.model.addConstr(
-                    gp.quicksum(
-                        self.lambda_var[l, k]
-                        for k in self.iterations_k
-                    )
-                    +
-                    self.penalty_var[l] == 1
-                    , name=f"Convexity;{l}"
-                )
-        else:
-            for l in self.locations_l:
-                self.model.addConstr(
-                    gp.quicksum(
-                        self.lambda_var[l, k]
-                        for k in self.iterations_k
-                    ) == 1
-                    , name=f"Convexity;{l}"
-                )
+
+        for l in self.locations_l:
+            self.model.addConstr(
+                gp.quicksum(
+                    self.lambda_var[l, k]
+                    for k in self.iterations_k
+                ) == 1
+                , name=f"Convexity;{l}"
+            )
 
     def add_MAB_constraint(self):
         """
@@ -299,6 +291,25 @@ class MasterProblem:
                     #Naming the constraint by the pattern "{Constraint type}; {indice}, {indice}" enabling transformation identification and sorting of shadow prices
                     , name=f"MAB Constr;{s},{t}"
                 )
+
+    def add_EOH_constraint(self):
+        for s in self.scenarios_s:
+            self.model.addConstr(
+                gp.quicksum(
+                    gp.quicksum(
+                        # Iterates across the columns dataframe, returns the x value if the index exists. Returns 0 otherwise
+                        self.columns.loc[(k, l, s, f, t_hat, 60)]["X"] if (k, l, s, f, t_hat,60) in self.columns.index else 0.0
+                        for f in self.smolt_types_f
+                        for t_hat in
+                        self.columns.loc[(k, l, s, f)].index.get_level_values("Deploy period").unique().tolist()
+                    )
+                    * self.lambda_var[l, k]
+                    for l in self.locations_l
+                    for k in self.iterations_k
+                ) >= self.parameters.MAB_company_limit * 0.3
+                , name=f"EOH;{s}"
+
+            )
 
 
     """
@@ -570,6 +581,29 @@ class MasterProblem:
             df.to_excel(f"./output/shadow_prices{self.iterations_k}.xlsx")
 
             return df
+
+    def get_eoh_shadow_price_df(self):
+        if self.model.status == GRB.OPTIMAL:
+            # Gets the shadow prices from the model, it is in the form of a dictionary. The Pi argument specifies that we get the shadow price attribute
+            shadow_prices = self.model.getAttr("Pi", self.model.getConstrs())
+            #Creates a list for storing the shadow prices
+            shadow_prices_list = []
+            #Iterates thorugh all constraints
+            for i, constraint in enumerate(self.model.getConstrs()):
+                #Splits the name into a constraint type component and a constraint number component
+                #The type corresponds to the function for adding constraints - MAB and convexity in this model
+                #The constraint number is the enumeration of the particular constraint
+                constraint_type = constraint.constrName.split(";")[0]
+                if constraint_type == "EOH":
+                    constraint_number = int(constraint.constrName.split(";")[1])
+                    shadow_prices_list.append([constraint_number, shadow_prices[i]])
+
+            df = pd.DataFrame([elem[1] for elem in shadow_prices_list],index=[elem[0] for elem in shadow_prices_list])
+            df.index.names = ["Scenario"]
+
+            df.to_excel(f"./output/shadow_prices_eoh{self.iterations_k}.xlsx")
+            return df
+        pass
 
     """
     CHECK OPTIMALITY FUNCTIONS

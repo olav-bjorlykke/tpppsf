@@ -17,7 +17,8 @@ class SubProblem:
 
     def __init__(self,
                  site_objects,
-                 MAB_shadow_prices_df = pd.DataFrame()
+                 MAB_shadow_prices_df = pd.DataFrame(),
+                 EOH_shadow_prices_df = pd.DataFrame()
                  ):
         #Imported classes, containing parameters and data
         self.input_data = InputData()
@@ -41,6 +42,7 @@ class SubProblem:
         self.smolt_weights = self.parameters.smolt_weights
         self.growth_sets = [site.growth_sets for site in self.sites]
         self.MAB_shadow_prices_df = MAB_shadow_prices_df
+        self.EOH_shadow_prices_df = EOH_shadow_prices_df
 
         #Defining some instance attributes:
         self.iterations = 0
@@ -193,7 +195,7 @@ class SubProblem:
             self.model.setObjective(
                 # This is the objective (5.2) - which represents the objective for biomass maximization
                 gp.quicksum(
-                    self.scenario.scenario_probabilities[s] *
+                    self.scenario.scenario_probabilities[s] * (
                     gp.quicksum(
                         self.w[l, f, t_hat, t, s] -
                         self.x[l, f, t_hat, t, s] * self.MAB_shadow_prices_df.loc[(s, t)] if (s,t) in self.MAB_shadow_prices_df.index else 0.0
@@ -202,6 +204,13 @@ class SubProblem:
                         for t_hat in range(self.t_size)
                         for t in range(min(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size - 1),
                            min(t_hat + self.parameters.max_periods_deployed, self.t_size - 1))
+                    ) +
+                    gp.quicksum(
+                        self.x[l, f, t_hat, 60, s] * self.EOH_shadow_prices_df.loc[(s)] if (s) in self.EOH_shadow_prices_df.index else 0.0
+                        for l in range(self.l_size)
+                        for f in range(self.f_size)
+                        for t_hat in range(self.t_size)
+                    )
                     )
                     for s in range(self.s_size)
                 )
@@ -519,7 +528,6 @@ class SubProblem:
 
         dfs = self.get_second_stage_variables_df()
         scenarios = self.s_size
-        print(dfs)
         #Declaring a list for storing the x values
 
 
@@ -644,13 +652,13 @@ class SubProblem:
                     for deploy_period in deploy_period_list:
                         l3_data_storage = []
                         for t in range(deploy_period, min(deploy_period + self.parameters.max_periods_deployed, self.t_size)):
-                            x_entry = self.x[l, f, deploy_period, t, s].x
-                            w_entry = self.w[l, f, deploy_period, t, s].x
+                            x_entry = round(self.x[l, f, deploy_period, t, s].x,2)
+                            w_entry = round(self.w[l, f, deploy_period, t, s].x, 2)
                             employ_entry = self.employ_bin[l, t, s].x
                             harvest_entry = self.harvest_bin[l, t, s].x
                             deploy_entry = self.deploy_bin[l, t].x
                             deploy_type_entry = self.deploy_type_bin[l, f, t].x
-                            y_entry = self.y[l, f, t].X
+                            y_entry = round(self.y[l, f, t].x,2)
                             l3_data_storage.append(
                                 [x_entry, w_entry, employ_entry, harvest_entry, deploy_entry, deploy_type_entry,
                                  y_entry])
@@ -673,8 +681,11 @@ class SubProblem:
         return deploy_period_dfs
 
 
-    def set_shadow_prices_df(self, shadow_prices_df):
-        self.MAB_shadow_prices_df = shadow_prices_df
+    def set_shadow_prices_df(self, shadow_prices_df_mab, shadow_prices_df_EOH):
+        self.MAB_shadow_prices_df = shadow_prices_df_mab
+        self.EOH_shadow_prices_df = shadow_prices_df_EOH
+
+
 
 
     def call_back_for_init_column(self, model, where):
