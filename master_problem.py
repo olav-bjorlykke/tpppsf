@@ -578,7 +578,7 @@ class MasterProblem:
             df.sort_index(level="Period", inplace=True)
             df.sort_index(level="Scenario", inplace=True)
 
-            df.to_excel(f"./output/shadow_prices{self.iterations_k}.xlsx")
+            df.to_excel(f"./output/shadow_prices{len(self.iterations_k)}.xlsx")
 
             return df
 
@@ -601,7 +601,7 @@ class MasterProblem:
             df = pd.DataFrame([elem[1] for elem in shadow_prices_list],index=[elem[0] for elem in shadow_prices_list])
             df.index.names = ["Scenario"]
 
-            df.to_excel(f"./output/shadow_prices_eoh{self.iterations_k}.xlsx")
+            df.to_excel(f"./output/shadow_prices_eoh{len(self.iterations_k)}.xlsx")
             return df
         pass
 
@@ -647,14 +647,14 @@ class MasterProblem:
 
     def check_column_equal(self):
         current_iteration = len(self.iterations_k) - 1
+        new_column = self.columns.loc[(current_iteration)]
         if current_iteration > 2:
-            previous_column = self.columns.loc[(current_iteration - 1)]
-            new_column = self.columns.loc[(current_iteration)]
-
-            if new_column.index.equals(previous_column.index):
-                columns_to_check = ["Employ bin", "Harvest bin", "Deploy bin", "Deploy type bin"]
-                if new_column[columns_to_check].equals(previous_column[columns_to_check]):
-                    self.is_model_solved = True
+            for i in range(current_iteration - 1):
+                previous_column = self.columns.loc[(i)]
+                if new_column.index.equals(previous_column.index):
+                    columns_to_check = ["Employ bin", "Harvest bin", "Deploy bin", "Deploy type bin"]
+                    if new_column[columns_to_check].equals(previous_column[columns_to_check]):
+                        self.is_model_solved = True
 
 
 
