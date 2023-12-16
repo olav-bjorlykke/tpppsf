@@ -3,7 +3,7 @@ import pandas as pd
 from input_data import InputData
 from site_class import Site
 from scenarios import Scenarios
-from sub_problem_class import SubProblem
+from monolithic_model import SubProblem
 import configs
 
 

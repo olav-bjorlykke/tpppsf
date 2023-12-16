@@ -9,7 +9,7 @@ from scenarios import Scenarios
 import matplotlib.pyplot as plt
 import configs
 
-class MonolithicProblem:
+class SubProblem:
     iterations = 0
     solution_index_names = ["Scenario", "Smolt type", "Deploy period", "Period"]
     column_index_names = ["Location", "Scenario", "Smolt type", "Deploy period", "Period"]
@@ -84,6 +84,40 @@ class MonolithicProblem:
 
 
         #Putting solution into variables for export
+
+    def solve_as_sub_problem(self):
+        self.model = gp.Model(f"Single site solution")
+
+        # Declaing variables
+        self.declare_variables()
+
+        # Setting objective
+        self.set_decomped_objective()
+
+        # Adding constraints
+        self.add_smolt_deployment_constraints()
+        self.add_fallowing_constraints()
+        self.add_inactivity_constraints()
+        self.add_harvesting_constraints()
+        self.add_biomass_development_constraints()
+        self.add_MAB_requirement_constraint()
+        self.add_initial_condition_constraint()
+        self.add_forcing_constraints()
+        # self.add_MAB_company_requirement_constraint()
+        # self.add_end_of_horizon_constraint()
+        # self.add_x_forcing_constraint()
+        self.add_up_branching_constraints()
+        self.add_down_branching_constraints()
+
+        # Running gurobi to optimize model
+        self.model.optimize()
+
+        # Printing solution
+        if self.model.status == GRB.OPTIMAL:
+            self.print_solution_to_excel()
+            self.plot_solutions_x_values_per_site()
+            self.plot_solutions_x_values_aggregated()
+            self.iterations += 1
 
     def create_initial_columns(self):
         self.model = gp.Model(f"Find feasible solution")
@@ -161,11 +195,12 @@ class MonolithicProblem:
                 gp.quicksum(
                     self.scenario.scenario_probabilities[s] *
                     gp.quicksum(
-                        self.w[f, t_hat, t, s] -
-                        self.x[f, t_hat, t, s] * self.MAB_shadow_prices_df.loc[(s, t)] if (s,t) in self.MAB_shadow_prices_df.index else 0.0
+                        self.w[l, f, t_hat, t, s] -
+                        self.x[l, f, t_hat, t, s] * self.MAB_shadow_prices_df.loc[(s, t)] if (s,t) in self.MAB_shadow_prices_df.index else 0.0
+                        for l in range(self.l_size)
                         for f in range(self.f_size)
                         for t_hat in range(self.t_size)
-                        for t in range(min(self.growth_sets.loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size - 1),
+                        for t in range(min(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size - 1),
                            min(t_hat + self.parameters.max_periods_deployed, self.t_size - 1))
                     )
                     for s in range(self.s_size)
@@ -445,7 +480,7 @@ class MonolithicProblem:
     def add_up_branching_constraints(self):
         for indice in self.branching_variable_indices_up:
             self.model.addConstr(
-                self.deploy_bin[indice] == 1,
+                self.deploy_bin[0, indice] == 1, #l set to 0 as this should only be used when there is only one site
                 name = "Branching constraint"
             )
 
@@ -453,7 +488,7 @@ class MonolithicProblem:
     def add_down_branching_constraints(self):
         for indice in self.branching_variable_indices_down:
             self.model.addConstr(
-                self.deploy_bin[indice] == 0,
+                self.deploy_bin[0, indice] == 0, #l set to 0 as this should only be used when there is only one site
                 name = "Branching constraint"
             )
 

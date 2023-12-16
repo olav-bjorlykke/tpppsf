@@ -300,6 +300,7 @@ class MasterProblem:
                     , name=f"MAB Constr;{s},{t}"
                 )
 
+
     """
     ADDING VARIABLE TRACKING CONSTRAINTS
     """
@@ -565,6 +566,8 @@ class MasterProblem:
             #Reorders the dataframe based on the index values
             df.sort_index(level="Period", inplace=True)
             df.sort_index(level="Scenario", inplace=True)
+
+            df.to_excel(f"./output/shadow_prices{self.iterations_k}.xlsx")
 
             return df
 

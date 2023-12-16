@@ -20,7 +20,7 @@ class SubProblem:
         self.input_data = InputData()
         self.parameters = GlobalParameters()
         self.scenario = Scenarios(self.input_data.temperatures_df)
-        self.site = site_objects
+        self.sites = site_objects
 
         #Setting variables to contain the size of sets
         self.f_size = 1  #TODO: declare using the smolt set
@@ -28,10 +28,10 @@ class SubProblem:
         self.s_size = 5  #TODO: len(parameters.scenario_probabilities)
 
         #Defining some variables from the data objects for easier reference
-        self.growth_factors = self.site.growth_per_scenario_df
+        self.growth_factors = self.sites.growth_per_scenario_df
         self.smolt_weights = self.parameters.smolt_weights
-        self.growth_sets = self.site.growth_sets
-        self.site = site_objects
+        self.growth_sets = self.sites.growth_sets
+        self.sites = site_objects
         self.MAB_shadow_prices_df = MAB_shadow_prices_df
 
         #Defining some instance attributes:
@@ -41,7 +41,7 @@ class SubProblem:
 
 
     def solve_and_print_model(self):
-        self.model = gp.Model(f"Single site solution {self.site.name}")
+        self.model = gp.Model(f"Single site solution {self.sites.name}")
 
         #Declaing variables
         self.declare_variables()
@@ -73,7 +73,7 @@ class SubProblem:
         #Putting solution into variables for export
 
     def create_zero_columns(self):
-        self.model = gp.Model(f"Single site solution {self.site.name}")
+        self.model = gp.Model(f"Single site solution {self.sites.name}")
 
         # Declaing variables
         self.declare_variables()
@@ -285,16 +285,16 @@ class SubProblem:
 
     def add_MAB_requirement_constraint(self):
         self.model.addConstrs(
-            gp.quicksum(self.x[f, t_hat, t, s] for f in range(self.f_size)) <= self.site.MAB_capacity
+            gp.quicksum(self.x[f, t_hat, t, s] for f in range(self.f_size)) <= self.sites.MAB_capacity
             for t_hat in range(self.t_size)
             for t in range(t_hat, min(t_hat + self.parameters.max_periods_deployed, self.t_size))
             for s in range(self.s_size)
         )
 
     def add_initial_condition_constraint(self): #TODO: Add initial constraints
-        if self.site.init_biomass_at_site:
+        if self.sites.init_biomass_at_site:
             self.model.addConstr(
-                self.y[0,0] == self.site.init_biomass,
+                self.y[0,0] == self.sites.init_biomass,
                 name="Initial Condition"
             )
 
@@ -336,7 +336,7 @@ class SubProblem:
         data_list = []
 
         if self.model.status == GRB.OPTIMAL:
-            self.get_second_stage_variables_df().to_excel(f"./results/sub_problem{self.site.name}.xlsx", index=True)
+            self.get_second_stage_variables_df().to_excel(f"./results/sub_problem{self.sites.name}.xlsx", index=True)
 
     def plot_solutions_x_values(self):
         """
@@ -369,10 +369,10 @@ class SubProblem:
         for scenario in x_values:
             plt.plot(x_axis, scenario)
 
-        plt.title(f"Biomass at site {self.site.name} iteration {self.iterations}")
+        plt.title(f"Biomass at site {self.sites.name} iteration {self.iterations}")
         plt.ylabel("Biomass")
         plt.xlabel("Periods")
-        path = f'results/plots/{self.site.name}{self.iterations}.png'
+        path = f'results/plots/{self.sites.name}{self.iterations}.png'
         plt.savefig(path)
 
         plt.show()

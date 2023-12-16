@@ -33,12 +33,12 @@ class Node:
 
     def solve_sub_problems(self):
         for sub_problem in self.sub_problems:
-            sub_problem.solve_and_print_model()
+            sub_problem.solve_as_sub_problem()
 
     def get_columns_from_sub_problems(self):
         new_column = []
         for sub_problem in self.sub_problems:
-            new_column.append(sub_problem.get_second_stage_variables_df())
+            new_column.append(sub_problem.get_second_stage_variables_df()[0])
 
         # Concatinating the results dataframe from every location to one multiindex dataframe
         new_column_df = pd.concat(new_column, keys=[i for i in range(len(new_column))])
