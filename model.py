@@ -9,7 +9,7 @@ from scenarios import Scenarios
 import matplotlib.pyplot as plt
 import configs
 
-class SubProblem:
+class Model:
     iterations = 0
     solution_index_names = ["Scenario", "Smolt type", "Deploy period", "Period"]
     column_index_names = ["Location", "Scenario", "Smolt type", "Deploy period", "Period"]
