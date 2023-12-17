@@ -1,7 +1,7 @@
 from site_class import Site
 from input_data import InputData
 from scenarios import Scenarios
-from monolithic_model import MonolithicProblem
+from monolithic_model import SubProblem
 import subproblem_list
 
 input_test =InputData()
@@ -13,10 +13,10 @@ area_senja_string = "Senja"
 
 
 
-mon_test = MonolithicProblem(
-    subproblem_list.short_sites_list
+mon_test = SubProblem(
+    subproblem_list.SITE_LIST
 )
 
-mon_test.create_initial_columns()
+test = mon_test.create_initial_columns()
 
 
