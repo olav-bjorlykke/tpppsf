@@ -19,4 +19,5 @@ mon_test = SubProblem(
 
 test = mon_test.create_initial_columns()
 
+mon_test.plot_solutions_agregate_vs_MAB_limit()
 

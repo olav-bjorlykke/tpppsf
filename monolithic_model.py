@@ -424,7 +424,7 @@ class SubProblem:
             for t in range(self.t_size + 1):
                 for s in range(self.s_size):
                     self.model.addConstr(
-                        gp.quicksum(self.x[l, f, t_hat, t, s] for l in range(self.l_size) for t_hat in range(t) for f in range(self.f_size))
+                        gp.quicksum(self.x[l, f, t_hat, t, s] for l in range(self.l_size) for t_hat in range(min(t + 1, 60)) for f in range(self.f_size))
                          <= configs.MAB_COMPANY_LIMIT
                         , name="company MAB limit"
                     )
@@ -615,6 +615,47 @@ class SubProblem:
 
         plt.show()
 
+    def plot_solutions_agregate_vs_MAB_limit(self):
+        dfs = self.get_second_stage_variables_df()
+        scenarios = self.s_size
+
+        # Declaring a list for storing the x values
+        x_values = []
+
+        # Iterating through the dataframe to sum together the biomass at location for every site
+        for s in range(scenarios):
+            scenarios_x_values = []
+            for t in range(self.t_size + 1):
+                x_t_aggregate = 0
+                for t_hat in range(self.t_size):
+                    for f in range(self.f_size):
+                        for l in range(self.l_size):
+                            df = dfs[l]
+                            x_t_aggregate += df.loc[(s, f, t_hat, t)]["X"] if (s, f, t_hat, t) in df.index else 0.0
+
+
+
+                scenarios_x_values.append(x_t_aggregate)
+
+            x_values.append(scenarios_x_values)
+
+            # Declaring a variable for storing the x-axis to be used in the plot
+        x_axis = np.arange(0, self.t_size + 1)
+
+            # Adding to the plots
+        for scenario in x_values:
+            plt.plot(x_axis, scenario)
+
+        plt.plot(x_axis, np.full(self.t_size + 1, self.parameters.MAB_company_limit))
+        plt.ylim(0, self.parameters.MAB_company_limit * 1.20)
+
+        plt.title(f"Biomass at site aggregated")
+        plt.ylabel("Biomass")
+        plt.xlabel("Periods")
+
+
+        plt.show()
+
     def get_deploy_period_list(self):
         deploy_periods_list = []
         for l in range(self.l_size):
@@ -697,15 +738,6 @@ class SubProblem:
         self.EOH_shadow_prices_df = shadow_prices_df_EOH
 
 
-
-
-    def call_back_for_init_column(self, model, where):
-        if where == GRB.Callback.MIPSOL:
-            # This callback is called each time an integer feasible solution is found
-            gap = model.cbGet(GRB.Callback.MIPSOL_OBJBND) - model.cbGet(GRB.Callback.MIPSOL_OBJBST)
-            if gap < model.cbGet(GRB.Callback.MIPSOL_OBJBST):
-                print("Stopping optimization: Gap < 100%")
-                model.terminate()
 
 
 
