@@ -5,10 +5,12 @@ import numpy as np
 from parameters import GlobalParameters
 from input_data import InputData
 from scenarios import Scenarios
+import time
 
 
 class MasterProblem:
     #Sets
+    time_in_master = 0
 
 
 
@@ -120,6 +122,7 @@ class MasterProblem:
         :return:
         """
         print("######### MASTER PROBLEM ##########")
+        start_time = time.perf_counter()
         #Declare model
         self.model = gp.Model(f"Master Problem {self.iterations_k}")
         self.model.setParam("NumericFocus", 2)
@@ -149,11 +152,14 @@ class MasterProblem:
 
         #Print solution
         self.print_solution()
-        self.columns.to_excel(f"./output/column{len(self.iterations_k)}.xlsx")
 
         #Check if we have reached optimality for the LP relaxed problem, or if two columns are the same
         self.check_optimality()
         self.check_column_equal()
+
+        end_time = time.perf_counter()
+        time_to_run_master = end_time - start_time
+        self.time_in_master += time_to_run_master
 
         self.iterations += 1
 
@@ -286,7 +292,7 @@ class MasterProblem:
                         for l in self.locations_l
                         for k in self.iterations_k
                     )
-                    <= self.parameters.MAB_company_limit #TODO: The 1.02 factor is added as there is some incongruence between the MAB generated in the initial colums and the one enforced in the master, get to the botto of why this is at a later point
+                    <= self.parameters.MAB_company_limit * 1.02 #TODO: The 1.02 factor is added as there is some incongruence between the MAB generated in the initial colums and the one enforced in the master, get to the botto of why this is at a later point
 
                     #Naming the constraint by the pattern "{Constraint type}; {indice}, {indice}" enabling transformation identification and sorting of shadow prices
                     , name=f"MAB Constr;{s},{t}"
@@ -578,7 +584,6 @@ class MasterProblem:
             df.sort_index(level="Period", inplace=True)
             df.sort_index(level="Scenario", inplace=True)
 
-            df.to_excel(f"./output/shadow_prices{len(self.iterations_k)}.xlsx")
 
             return df
 
@@ -601,7 +606,6 @@ class MasterProblem:
             df = pd.DataFrame([elem[1] for elem in shadow_prices_list],index=[elem[0] for elem in shadow_prices_list])
             df.index.names = ["Scenario"]
 
-            df.to_excel(f"./output/shadow_prices_eoh{len(self.iterations_k)}.xlsx")
             return df
         pass
 

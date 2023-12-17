@@ -11,7 +11,7 @@ def set_scenarios():
 INSTANCES = ["SMALL", "MEDIUM", "LARGE"]
 INSTANCE = INSTANCES[set_instance()]
 NUM_SCENARIOS = set_scenarios()
-OUTPUT_DIR = f"-./output/instance_{INSTANCE}_scenario_{NUM_SCENARIOS}"
+OUTPUT_DIR = f"./output/instance_{INSTANCE}_scenario_{NUM_SCENARIOS}"
 
 
 print(f"Running {NUM_SCENARIOS} scenarios and {INSTANCE} instance")

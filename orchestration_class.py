@@ -1,6 +1,8 @@
 import time
 
 import pandas as pd
+
+import configs
 from master_problem import MasterProblem
 from node import Node
 from gurobipy import GRB
@@ -41,7 +43,15 @@ class Orchestration:
         i = 0
         #Solve Node in unexplored nodes
         while self.unexplored_nodes and len(self.explored_nodes) < 1000:
+            #Settint the start time for running the node
             start_time = time.perf_counter()
+
+            #Setting the time spent in master and sub-problem to 0 for this iteration
+            self.node_obj.master_problem.time_in_master = 0
+            self.node_obj.sub_problems[0].time_in_sub_problem = 0
+
+
+
 
             current_node_label = self.unexplored_nodes.pop(0)
             current_node_label.iterations_number = i
@@ -54,6 +64,14 @@ class Orchestration:
                 current_node_label.upper_bound = self.node_obj.master_problem.model.ObjVal
                 new_branching_index = self.node_obj.branching_variable_index
 
+                #Printing the columns to excel
+                path = configs.OUTPUT_DIR + f"/columns_node_{i}.xlsx"
+                self.node_obj.master_problem.columns.to_excel(path)
+
+                #Printing lambda values to excel
+                path = configs.OUTPUT_DIR + f"/lambdas_node_{i}.xlsx"
+                self.node_obj.master_problem.get_lambda_df().to_excel(path)
+
 
                 #Solve the Node for the MIP problem
                 self.node_obj.master_problem.run_MIP_problem()
@@ -61,6 +79,10 @@ class Orchestration:
                     self.is_one_feasible_solution_found = True
                     current_node_label.feasible = True
                     current_node_label.feasible_solution = self.node_obj.master_problem.model.ObjVal
+
+                    # Printing lambda values to excel for the MIP solution
+                    path = configs.OUTPUT_DIR + f"/lambdas_MIP_node_{i}.xlsx"
+                    self.node_obj.master_problem.get_lambda_df().to_excel(path)
 
 
                     if current_node_label.feasible_solution >= current_node_label.parent_feasible_solution * 0.99:

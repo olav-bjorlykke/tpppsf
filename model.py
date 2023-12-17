@@ -8,11 +8,13 @@ from site_class import Site
 from scenarios import Scenarios
 import matplotlib.pyplot as plt
 import configs
+import time
 
 class Model:
     iterations = 0
     solution_index_names = ["Scenario", "Smolt type", "Deploy period", "Period"]
     column_index_names = ["Location", "Scenario", "Smolt type", "Deploy period", "Period"]
+    time_in_subproblem = 0
 
 
     def __init__(self,
@@ -88,6 +90,7 @@ class Model:
         #Putting solution into variables for export
 
     def solve_as_sub_problem(self):
+        start_time = time.perf_counter()
         self.model = gp.Model(f"Single site solution")
 
         # Declaing variables
@@ -114,12 +117,10 @@ class Model:
         # Running gurobi to optimize model
         self.model.optimize()
 
-        # Printing solution
-        if self.model.status == GRB.OPTIMAL:
-            self.print_solution_to_excel()
-            self.plot_solutions_x_values_per_site()
-            self.plot_solutions_x_values_aggregated()
-            self.iterations += 1
+        end_time = time.perf_counter()
+        time_to_run_master = end_time - start_time
+        self.time_in_subproblem += time_to_run_master
+
 
     def create_initial_columns(self):
         self.model = gp.Model(f"Find feasible solution")
@@ -155,8 +156,6 @@ class Model:
 
         # Printing solution
         if self.model.status != GRB.INFEASIBLE:
-            self.print_solution_to_csv()
-            self.print_solution_to_excel()
             self.plot_solutions_x_values_per_site()
             self.plot_solutions_x_values_aggregated()
             self.iterations += 1
