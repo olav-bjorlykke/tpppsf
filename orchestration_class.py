@@ -91,22 +91,7 @@ class Orchestration:
             i += 1
 
     def print_explored_node_to_file(self, explored_nodes):
-        with open('final_results.txt', 'w') as file:
-            for node_label in explored_nodes:
-                file.write("ITERATION:" + str(node_label.iterations_number))
-                file.write(";FEASIBLE SOLUTION:" + str(node_label.feasible_solution))
-                file.write(";UPPER BOUND:" + str(node_label.upper_bound))
-                file.write(";up_list:|")
-                for inner_list in node_label.up_list:
-                    # Convert each inner list to a string with a space separator
-                    inner_string = ','.join(map(str, inner_list))
-                    file.write(inner_string + '|')
-                file.write(";Down_list:|")
-                for inner_list in node_label.down_list:
-                    # Convert each inner list to a string with a space separator
-                    inner_string = ','.join(map(str, inner_list))
-                    file.write(inner_string + '|')
-                file.write("\n")
+        pass
 
 
 

@@ -1,4 +1,4 @@
-
+import configs
 class NodeLabel:
     def __init__(self,
                  iterations_number,
@@ -42,7 +42,8 @@ class NodeLabel:
         return up_child, down_child
 
     def print_node_label_to_file(self, time_to_run):
-        with open("results.txt", "a") as file:
+        file_path = configs.OUTPUT_DIR + "/results.txt"
+        with open(file_path, "a") as file:
             file.write("ITERATION:" + str(self.iterations_number))
             file.write("PARENT:" + str(self.parent_iteration))
             file.write(";TIME:" + str(time_to_run))
