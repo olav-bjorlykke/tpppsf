@@ -202,8 +202,8 @@ class SubProblem:
                         for l in range(self.l_size)
                         for f in range(self.f_size)
                         for t_hat in range(self.t_size)
-                        for t in range(min(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size - 1),
-                           min(t_hat + self.parameters.max_periods_deployed, self.t_size - 1))
+                        for t in range(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat],
+                                       min(t_hat + self.parameters.max_periods_deployed, self.t_size))
                     ) +
                     gp.quicksum(
                         self.x[l, f, t_hat, 60, s] * self.EOH_shadow_prices_df.loc[(s)] if (s) in self.EOH_shadow_prices_df.index else 0.0
@@ -438,7 +438,7 @@ class SubProblem:
                 self.model.addConstr(
                     gp.quicksum(self.x[l, f, t_hat, 60, s] for l in range(self.l_size) for t_hat in range(60 - self.parameters.max_periods_deployed, 59) for f in range(self.f_size))
                     >=
-                    self.parameters.MAB_company_limit * 0.5
+                    self.parameters.MAB_company_limit * self.parameters.MAB_util_end
                     , name="Second E0H down"
                 )
 

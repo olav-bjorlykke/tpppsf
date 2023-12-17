@@ -178,8 +178,8 @@ class MasterProblem:
         #Declaring the binary tracking variables
         self.deploy_bin = self.model.addVars(len(self.locations_l), len(self.periods_t), vtype=GRB.CONTINUOUS)
         self.deploy_type_bin = self.model.addVars(len(self.locations_l), len(self.smolt_types_f), len(self.periods_t), vtype=GRB.CONTINUOUS)
-        self.harvest_bin = self.model.addVars(len(self.locations_l), len(self.smolt_types_f), len(self.periods_t), len(self.periods_t), len(self.scenarios_s),vtype=GRB.CONTINUOUS)
-        self.employ_bin = self.model.addVars(len(self.locations_l), len(self.smolt_types_f), len(self.periods_t), len(self.periods_t), len(self.scenarios_s),vtype=GRB.CONTINUOUS)
+        self.harvest_bin = self.model.addVars(len(self.locations_l), len(self.smolt_types_f), 61, 61, len(self.scenarios_s),vtype=GRB.CONTINUOUS)
+        self.employ_bin = self.model.addVars(len(self.locations_l), len(self.smolt_types_f), 61, 61, len(self.scenarios_s),vtype=GRB.CONTINUOUS)
 
     def declare_MIP_variables(self):
         self.lambda_var = self.model.addVars(len(self.locations_l), len(self.iterations_k), vtype=GRB.BINARY, lb=0)
@@ -227,7 +227,7 @@ class MasterProblem:
     def set_objective_with_penalty_var(self):
         if self.iterations < 10:
             self.model.setObjective(
-                # This objective corresponds to the objective function in the decomposition model in chapter 6.3 in Bjorlykke and Vassbotten
+                # This objective corresponds to the objective function in the decomposition model in chapter 6.3 in Bjorlykke and Vassbotten, though it contains a penalty variable,as to ensure warm start.
                 gp.quicksum(
                     # Fetches scenario probabilities from the scenarios object and multiplicates it with the below expression
                     self.scenarios.scenario_probabilities[s] *
@@ -306,7 +306,7 @@ class MasterProblem:
                     * self.lambda_var[l, k]
                     for l in self.locations_l
                     for k in self.iterations_k
-                ) >= self.parameters.MAB_company_limit * 0.3
+                ) >= self.parameters.MAB_company_limit * self.parameters.MAB_util_end
                 , name=f"EOH;{s}"
 
             )
