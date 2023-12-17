@@ -286,7 +286,7 @@ class MasterProblem:
                         for l in self.locations_l
                         for k in self.iterations_k
                     )
-                    <= self.parameters.MAB_company_limit #TODO: set the actual limit for MAB across the sites as the limit
+                    <= self.parameters.MAB_company_limit * 1.02 #TODO: The 1.02 factor is added as there is some incongruence between the MAB generated in the initial colums and the one enforced in the master, get to the botto of why this is at a later point
 
                     #Naming the constraint by the pattern "{Constraint type}; {indice}, {indice}" enabling transformation identification and sorting of shadow prices
                     , name=f"MAB Constr;{s},{t}"

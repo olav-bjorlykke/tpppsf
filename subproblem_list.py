@@ -149,18 +149,23 @@ long_node_init_list = [[0,0], [2,0], [4,0], [7,0], [9,0],[10,0], [11,0], [14,0]]
 
 NODE_INIT_LIST = short_node_init_list
 SUB_PROBLEM_LIST = short_sub_problem_list
+SITE_LIST = short_sites_list
 
 if configs.INSTANCE == "SMALL":
     NODE_INIT_LIST = short_node_init_list
     SUB_PROBLEM_LIST = short_sub_problem_list
+    SITE_LIST = short_sites_list
+
 
 elif configs.INSTANCE == "MEDIUM":
     NODE_INIT_LIST = medium_node_init_list
     SUB_PROBLEM_LIST = medium_sub_problem_list
+    SITE_LIST = medium_sites_list
 
 elif configs.INSTANCE == "LARGE":
     NODE_INIT_LIST = long_node_init_list
     SUB_PROBLEM_LIST = sub_problem_list
+    SITE_LIST = sites_list
 
 else:
     print("Instance set does not match any, set to default")

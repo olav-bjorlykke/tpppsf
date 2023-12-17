@@ -1,6 +1,8 @@
 import pandas as pd
 from master_problem import MasterProblem
 from gurobipy import GRB
+import monolithic_model
+import subproblem_list
 from archive.zero_column import do_nothing_column
 import configs
 
@@ -25,7 +27,13 @@ class Node:
 
     def generate_initial_columns(self): #TODO: set to get initial column from generated column
         #Storage for the dataframes containing the sub problem results
-        initial_column = pd.read_csv(f"./init_columns/column_s{configs.NUM_SCENARIOS}_l{configs.NUM_LOCATIONS}.csv",index_col=["Location", "Scenario", "Smolt type", "Deploy period", "Period"])
+        #initial_column = pd.read_csv(f"./init_columns/column_s{configs.NUM_SCENARIOS}_l{configs.NUM_LOCATIONS}.csv",index_col=["Location", "Scenario", "Smolt type", "Deploy period", "Period"])
+        mon_model = monolithic_model.SubProblem(
+            subproblem_list.SITE_LIST
+        )
+
+        initial_column = mon_model.create_initial_columns()
+
         return initial_column
 
 

@@ -127,7 +127,7 @@ class SubProblem:
         #Telling the model to focus on finding a feasible solution
         self.model.setParam("MIPFocus", 1)
         #Stopping the model after one feasible solution is found
-        self.model.setParam("TimeLimit", 10)
+        self.model.setParam('SolutionLimit', 4)
 
         # Declaing variables
         self.declare_variables()
@@ -160,6 +160,11 @@ class SubProblem:
             self.plot_solutions_x_values_per_site()
             self.plot_solutions_x_values_aggregated()
             self.iterations += 1
+            return self.get_solution_as_df()
+        else:
+            return None
+
+
 
     def declare_variables(self):
         self.x = self.model.addVars(self.l_size, self.f_size, self.t_size, self.t_size +1, self.s_size, vtype=GRB.CONTINUOUS, lb=0, name="X")
@@ -513,6 +518,12 @@ class SubProblem:
             export_df = pd.concat(self.get_second_stage_variables_df(), keys=[i for i in range(self.l_size)])
             export_df.index.names = self.column_index_names
             export_df.to_csv(f"./init_columns/column_s{self.s_size}_l{self.l_size}.csv")
+
+    def get_solution_as_df(self):
+        if self.model.status != GRB.INFEASIBLE:
+            export_df = pd.concat(self.get_second_stage_variables_df(), keys=[i for i in range(self.l_size)])
+            export_df.index.names = self.column_index_names
+            return export_df
 
     def get_solution_df_from_csv(self, path):
         df = pd.read_csv(path, index_col=self.column_index_names)
