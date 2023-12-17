@@ -156,8 +156,8 @@ class Model:
 
         # Printing solution
         if self.model.status != GRB.INFEASIBLE:
-            self.plot_solutions_x_values_per_site()
-            self.plot_solutions_x_values_aggregated()
+            #self.plot_solutions_x_values_per_site()
+            #self.plot_solutions_x_values_aggregated()
             self.iterations += 1
             return self.get_solution_as_df()
         else:
@@ -509,7 +509,8 @@ class Model:
         if self.model.status != GRB.INFEASIBLE:
             i = 0
             for df in self.get_second_stage_variables_df():
-                df.to_excel(f"./results/mon_site{self.sites[i].name}.xlsx", index=True)
+                path = configs.OUTPUT_DIR + f"/monolithic_model_scenario{configs.NUM_SCENARIOS}_sites{configs.NUM_LOCATIONS}.xlsx"
+                df.to_excel(path)
                 i+=1
 
     def print_solution_to_csv(self):
@@ -609,7 +610,7 @@ class Model:
             plt.title(f"Biomass at site aggregated")
             plt.ylabel("Biomass")
             plt.xlabel("Periods")
-            path = f'results/plots/{self.sites[l].name}{self.iterations}.png'
+            path = configs.OUTPUT_DIR + f'/plot_aggregate.png'
             plt.savefig(path)
 
         plt.show()
@@ -651,6 +652,9 @@ class Model:
         plt.title(f"Biomass at site aggregated")
         plt.ylabel("Biomass")
         plt.xlabel("Periods")
+
+        path = configs.OUTPUT_DIR + f'/MAB_utilization.png'
+        plt.savefig(path)
 
 
         plt.show()
@@ -735,6 +739,14 @@ class Model:
     def set_shadow_prices_df(self, shadow_prices_df_mab, shadow_prices_df_EOH):
         self.MAB_shadow_prices_df = shadow_prices_df_mab
         self.EOH_shadow_prices_df = shadow_prices_df_EOH
+
+    def write_objective_value_to_file(self, time):
+        file_path = configs.OUTPUT_DIR + f"/monolithic_results_s{configs.NUM_SCENARIOS}_l{configs.NUM_LOCATIONS}.txt"
+        with open(file_path, "a") as file:
+            if self.model.status == GRB.OPTIMAL:
+                file.write(f"OBJECTIVE:{self.model.ObjVal}")
+                file.write(f";duration:{time}")
+
 
 
 
