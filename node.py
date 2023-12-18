@@ -64,11 +64,14 @@ class Node:
             shadow_prices_MAB = self.master_problem.get_MAB_constr_shadow_prices_df()
             shadow_prices_EOH = self.master_problem.get_eoh_shadow_price_df()
 
+
+
             if type(shadow_prices_MAB) == type(None):
                 return False
 
+
             for sub_problem in self.sub_problems:
-                sub_problem.set_shadow_prices_df(shadow_prices_MAB, shadow_prices_EOH)
+                sub_problem.set_shadow_prices_df(shadow_prices_df_mab=shadow_prices_MAB, shadow_prices_df_EOH=shadow_prices_EOH)
 
             self.solve_sub_problems()
             new_column = self.get_columns_from_sub_problems()

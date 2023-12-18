@@ -116,6 +116,7 @@ class MasterProblem:
 
 
 
+
     def run_and_solve_master_problem(self):
         """
         Runs the optimization problem and prints the solution to the terminal
@@ -312,7 +313,7 @@ class MasterProblem:
                     * self.lambda_var[l, k]
                     for l in self.locations_l
                     for k in self.iterations_k
-                ) >= self.parameters.MAB_company_limit * self.parameters.MAB_util_end
+                ) >= self.parameters.MAB_company_limit * self.parameters.MAB_util_end * 0.9
                 , name=f"EOH;{s}"
 
             )

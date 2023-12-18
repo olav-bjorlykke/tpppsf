@@ -117,6 +117,9 @@ class Model:
         # Running gurobi to optimize model
         self.model.optimize()
 
+        if self.model.status != GRB.INFEASIBLE:
+            self.plot_solutions_x_values_per_site()
+
         end_time = time.perf_counter()
         time_to_run_master = end_time - start_time
         self.time_in_subproblem += time_to_run_master
@@ -128,7 +131,7 @@ class Model:
         #Telling the model to focus on finding a feasible solution
         self.model.setParam("MIPFocus", 1)
         #Stopping the model after one feasible solution is found
-        self.model.setParam('SolutionLimit', 4)
+        self.model.setParam('SolutionLimit', 10)
 
         # Declaing variables
         self.declare_variables()
@@ -201,19 +204,19 @@ class Model:
                 gp.quicksum(
                     self.scenario.scenario_probabilities[s] * (
                     gp.quicksum(
-                        self.w[l, f, t_hat, t, s] -
+                        self.w[l, f, t_hat, t, s] - #TODO: This was just changed to a +, check if it should be a -
                         self.x[l, f, t_hat, t, s] * self.MAB_shadow_prices_df.loc[(s, t)] if (s,t) in self.MAB_shadow_prices_df.index else 0.0
                         for l in range(self.l_size)
                         for f in range(self.f_size)
                         for t_hat in range(self.t_size)
                         for t in range(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat],
                                        min(t_hat + self.parameters.max_periods_deployed, self.t_size))
-                    ) +
+                    ) -
                     gp.quicksum(
-                        self.x[l, f, t_hat, 60, s] * self.EOH_shadow_prices_df.loc[(s)] if (s) in self.EOH_shadow_prices_df.index else 0.0
+                        self.x[l, 0, t_hat, 60, s] * self.EOH_shadow_prices_df.loc[(s)] if (s) in self.EOH_shadow_prices_df.index else 0.0
                         for l in range(self.l_size)
                         for f in range(self.f_size)
-                        for t_hat in range(self.t_size)
+                        for t_hat in range(self.t_size - self.parameters.max_periods_deployed + 1, self.t_size -1)
                     )
                     )
                     for s in range(self.s_size)
@@ -415,7 +418,7 @@ class Model:
             gp.quicksum(self.x[l, f, t_hat, t, s] for f in range(self.f_size)) <= self.sites[l].MAB_capacity
             for l in range(self.l_size)
             for t_hat in range(self.t_size)
-            for t in range(t_hat, min(t_hat + self.parameters.max_periods_deployed, self.t_size))
+            for t in range(t_hat, min(t_hat + self.parameters.max_periods_deployed, self.t_size +1))
             for s in range(self.s_size)
         )
 
