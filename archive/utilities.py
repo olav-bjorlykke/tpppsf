@@ -2,7 +2,7 @@ import os
 
 import pandas as pd
 
-directory_path = './init_columns/'
+directory_path = '../init_columns/'
 
 
 for item in os.listdir(directory_path):

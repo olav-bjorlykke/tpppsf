@@ -108,6 +108,8 @@ class Model:
         self.add_MAB_requirement_constraint()
         self.add_initial_condition_constraint()
         self.add_forcing_constraints()
+        #TODO: Explain why these are commented out
+
         # self.add_MAB_company_requirement_constraint()
         # self.add_end_of_horizon_constraint()
         # self.add_x_forcing_constraint()
@@ -122,7 +124,10 @@ class Model:
 
         end_time = time.perf_counter()
         time_to_run_master = end_time - start_time
+        print(f"#### time to run: {time_to_run_master}")
+        print(f"{self.time_in_subproblem}")
         self.time_in_subproblem += time_to_run_master
+        print(f"{self.time_in_subproblem}")
 
 
     def create_initial_columns(self):
@@ -484,7 +489,7 @@ class Model:
             for s in range(self.s_size)
         )
 
-    def add_x_forcing_constraint(self):
+    def add_x_forcing_constraint(self):#TODO: check if used or remove
         self.model.addConstrs(
             self.x[l, f, t_hat, self.t_size, s] <= self.deploy_bin[l,t_hat] * self.parameters.MAB_company_limit
             for t_hat in range(self.t_size)
@@ -511,10 +516,13 @@ class Model:
     def print_solution_to_excel(self):
         if self.model.status != GRB.INFEASIBLE:
             i = 0
-            for df in self.get_second_stage_variables_df():
-                path = configs.OUTPUT_DIR + f"/monolithic_model_scenario{configs.NUM_SCENARIOS}_sites{configs.NUM_LOCATIONS}.xlsx"
-                df.to_excel(path)
-                i+=1
+
+            consolidted_df = pd.concat([df for df in self.get_second_stage_variables_df()], keys=[i for i in range(self.l_size)])
+
+
+            path = configs.OUTPUT_DIR + f"/monolithic_model_scenario{configs.NUM_SCENARIOS}_sites{configs.NUM_LOCATIONS}.xlsx"
+            consolidted_df.to_excel(path)
+            i+=1
 
     def print_solution_to_csv(self):
         if self.model.status != GRB.INFEASIBLE:

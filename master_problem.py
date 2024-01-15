@@ -28,12 +28,12 @@ class MasterProblem:
         self.columns = self.add_first_column(initial_column)
 
         #Setting some class attributes
-        self.periods_t = None
         self.lambdas = None
         self.previous_solution = None
         self.is_model_solved = False
         self.branched_variable_indices_up = [[0, 0]] #TODO: Implement a method that gets this from sites with initial biomass
         self.branched_variable_indices_down = []
+        self.periods_t = None
         self.iterations_k = None
         self.locations_l = None
         self.scenarios_s = None
@@ -180,7 +180,7 @@ class MasterProblem:
         #TODO: Implement consistency in indice order with subproblem and thesis
         #Declaring the decision variables for the model
         self.lambda_var = self.model.addVars(len(self.locations_l), len(self.iterations_k), vtype=GRB.CONTINUOUS, lb=0)
-        self.penalty_var = self.model.addVars(len(self.locations_l))
+        self.penalty_var = self.model.addVars(len(self.locations_l)) #TODO: remove this variable
 
         #Declaring the binary tracking variables
         self.deploy_bin = self.model.addVars(len(self.locations_l), len(self.periods_t), vtype=GRB.CONTINUOUS)
@@ -206,7 +206,7 @@ class MasterProblem:
         Sets the objective function for the model - chapter 6.3 in Bjorlykke & Vassbotten
         :return:
         """
-        self.set_true_objective()
+        self.set_true_objective() #TODO: Refactor code to remove: set objective with penalty variable
 
     def set_true_objective(self):
         self.model.setObjective(
@@ -264,7 +264,6 @@ class MasterProblem:
         Adds the convecity constraint, see chapter 6.3 in Bjorlykke and Vasbotten for mathematical description
         :return:
         """
-
         for l in self.locations_l:
             self.model.addConstr(
                 gp.quicksum(

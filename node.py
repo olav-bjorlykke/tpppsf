@@ -37,7 +37,6 @@ class Node:
         return initial_column
 
 
-
     def solve_sub_problems(self):
         for sub_problem in self.sub_problems:
             sub_problem.solve_as_sub_problem()
