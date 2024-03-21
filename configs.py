@@ -4,11 +4,11 @@ def set_instance():
     return instance
 
 def set_scenarios():
-    num_scenarios = int(input("Set the number of scenarios 2,5 or 10: "))
+    num_scenarios = int(input("Set the number of scenarios 1,2,5 or 10: "))
     return num_scenarios
 
 
-INSTANCES = ["SMALL", "MEDIUM", "LARGE"]
+INSTANCES = ["SMALL", "MEDIUM", "LARGE", "TEST"]
 INSTANCE = INSTANCES[set_instance()]
 NUM_SCENARIOS = set_scenarios()
 OUTPUT_DIR = f"./output/instance_{INSTANCE}_scenario_{NUM_SCENARIOS}"
@@ -26,6 +26,9 @@ elif NUM_SCENARIOS == 5:
 elif NUM_SCENARIOS == 10:
     SCENARIOS_VARIATIONS = [0.95,0.96,0.97,0.98,0.99,1.0,1.01,1.02,1.03,1.04]
     SCENARIO_PROBABILITIES = [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1]
+elif NUM_SCENARIOS == 1:
+    SCENARIOS_VARIATIONS = [1.0]
+    SCENARIO_PROBABILITIES = [1.0]
 
 
 MAB_COMPANY_LIMIT = 4000 * 1000
@@ -39,6 +42,9 @@ elif INSTANCE == "MEDIUM":
     MAB_COMPANY_LIMIT = 10000 * 1000
 elif INSTANCE == "SMALL":
     NUM_LOCATIONS = 3
+    MAB_COMPANY_LIMIT = 4000 * 1000
+elif INSTANCE == "TEST":
+    NUM_LOCATIONS = 2
     MAB_COMPANY_LIMIT = 4000 * 1000
 else:
     print("Instance not defined")
