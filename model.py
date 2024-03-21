@@ -67,6 +67,7 @@ class Model:
         self.add_inactivity_constraints()
         self.add_harvesting_constraints()
         self.add_biomass_development_constraints()
+        self.add_employ_bin_forcing_constraints()
         self.add_MAB_requirement_constraint()
         self.add_initial_condition_constraint()
         self.add_forcing_constraints()
@@ -183,7 +184,8 @@ class Model:
         self.deploy_bin = self.model.addVars(self.l_size, self.t_size, vtype=GRB.BINARY)
         self.harvest_bin = self.model.addVars(self.l_size, self.t_size, self.s_size, vtype=GRB.BINARY)
         self.employ_bin = self.model.addVars(self.l_size, self.t_size, self.s_size, vtype=GRB.BINARY)
-
+        self.employ_bin_granular = self.model.addVars(self.l_size, self.t_size, self.t_size, self.s_size,
+                                                      vtype=GRB.BINARY)
     def set_objective(self):
         #FIXED
         self.model.setObjective(  # This is the objective (5.2) - which represents the objective for biomass maximization
@@ -407,14 +409,28 @@ class Model:
 
         )
 
+    def add_employ_bin_forcing_constraints(self):
+        self.model.addConstrs(
+            self.employ_bin_granular[l,t_hat, t, s] - gp.quicksum(self.x[l,f,t_hat,t,s] for f in range(self.f_size)) <= 0
+            for l in range(self.l_size)
+            for t_hat in range(self.t_size)
+            for t in range(self.t_size)
+            for s in range(self.s_size)
+        )
 
         self.model.addConstrs(
-            # This is the constraint (5.12) - Which forces the binary employement variable to be positive if biomass is employed
-            gp.quicksum(self.x[l, f, t_hat, t, s] for f in range(self.f_size)) <= self.employ_bin[l, t, s] * self.parameters.bigM
+            gp.quicksum(self.x[l,f,t_hat, t, s] for f in range(self.f_size)) - self.employ_bin_granular[l, t_hat, t, s] * self.parameters.bigM <= 0
             for l in range(self.l_size)
-            for s in range(self.s_size)
             for t_hat in range(self.t_size)
-            for t in range(t_hat, min(t_hat + self.parameters.max_periods_deployed, self.t_size))
+            for t in range(self.t_size)
+            for s in range(self.s_size)
+        )
+
+        self.model.addConstrs(
+            self.employ_bin[l,t,s] - gp.quicksum(self.employ_bin_granular[l,t_hat, t, s] for t_hat in range(self.t_size)) == 0
+            for l in range(self.l_size)
+            for t in range(self.t_size)
+            for s in range(self.s_size)
         )
 
     #Fixed
