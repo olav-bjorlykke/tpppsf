@@ -89,7 +89,42 @@ class Model:
 
 
         #Putting solution into variables for export
+    def solve_as_minimizing_problem(self):
+        self.model = gp.Model(f"Single site solution")
+        self.model.setParam('IntegralityFocus', 1)
 
+        # Declaing variables
+        self.declare_variables()
+
+
+        # Setting objective
+        self.set_minimizing_ojective()
+
+        # Adding constraints
+        self.add_smolt_deployment_constraints()
+        self.add_fallowing_constraints()
+        self.add_inactivity_constraints()
+        self.add_harvesting_constraints()
+        self.add_biomass_development_constraints()
+        self.add_employ_bin_forcing_constraints()
+        self.add_MAB_requirement_constraint()
+        self.add_initial_condition_constraint()
+        self.add_forcing_constraints()
+        self.add_MAB_company_requirement_constraint()
+        self.add_end_of_horizon_constraint()
+        self.add_x_forcing_constraint()
+        self.add_up_branching_constraints()
+        self.add_down_branching_constraints()
+
+        # Running gurobi to optimize model
+        self.model.optimize()
+
+        # Printing solution
+        if self.model.status == GRB.OPTIMAL:
+            self.print_solution_to_excel()
+            self.plot_solutions_x_values_per_site()
+            self.plot_solutions_x_values_aggregated()
+            self.iterations += 1
     def solve_as_sub_problem(self):
         start_time = time.perf_counter()
         self.model = gp.Model(f"Single site solution")
@@ -106,6 +141,7 @@ class Model:
         self.add_inactivity_constraints()
         self.add_harvesting_constraints()
         self.add_biomass_development_constraints()
+        self.add_employ_bin_forcing_constraints()
         self.add_MAB_requirement_constraint()
         self.add_initial_condition_constraint()
         self.add_forcing_constraints()
@@ -129,8 +165,6 @@ class Model:
         print(f"{self.time_in_subproblem}")
         self.time_in_subproblem += time_to_run_master
         print(f"{self.time_in_subproblem}")
-
-
     def create_initial_columns(self):
         self.model = gp.Model(f"Find feasible solution")
 
@@ -151,6 +185,7 @@ class Model:
         self.add_inactivity_constraints()
         self.add_harvesting_constraints()
         self.add_biomass_development_constraints()
+        self.add_employ_bin_forcing_constraints()
         self.add_MAB_requirement_constraint()
         self.add_initial_condition_constraint()
         self.add_forcing_constraints()
@@ -180,12 +215,16 @@ class Model:
         self.w = self.model.addVars(self.l_size, self.f_size, self.t_size, self.t_size, self.s_size, vtype=GRB.CONTINUOUS, lb=0, name="W")
 
         # Declaring the binary decision variables
-        self.deploy_type_bin = self.model.addVars(self.l_size, self.f_size, self.t_size, vtype=GRB.BINARY)
-        self.deploy_bin = self.model.addVars(self.l_size, self.t_size, vtype=GRB.BINARY)
-        self.harvest_bin = self.model.addVars(self.l_size, self.t_size, self.s_size, vtype=GRB.BINARY)
-        self.employ_bin = self.model.addVars(self.l_size, self.t_size, self.s_size, vtype=GRB.BINARY)
+        self.deploy_type_bin = self.model.addVars(self.l_size, self.f_size, self.t_size, vtype=GRB.BINARY, name="deploy_type_bin")
+        self.deploy_bin = self.model.addVars(self.l_size, self.t_size, vtype=GRB.BINARY, name="deploy_bin")
+        self.harvest_bin = self.model.addVars(self.l_size, self.t_size, self.s_size, vtype=GRB.BINARY, name="harvest_bin")
+        self.employ_bin = self.model.addVars(self.l_size, self.t_size, self.s_size, vtype=GRB.BINARY, name="employ_bin")
         self.employ_bin_granular = self.model.addVars(self.l_size, self.t_size, self.t_size, self.s_size,
-                                                      vtype=GRB.BINARY)
+                                                      vtype=GRB.BINARY,  name="employ_bin_granular")
+
+    """
+    OBJECTIVES
+    """
     def set_objective(self):
         #FIXED
         self.model.setObjective(  # This is the objective (5.2) - which represents the objective for biomass maximization
@@ -203,7 +242,6 @@ class Model:
             )
             , GRB.MAXIMIZE
         )
-
     def set_decomped_objective(self):
         if not self.MAB_shadow_prices_df.empty:
             self.model.setObjective(
@@ -233,18 +271,18 @@ class Model:
 
         else:
             self.set_objective()
-
-    def set_zero_ojective(self):
+    def set_minimizing_ojective(self):
         self.model.setObjective(
             # This is the objective (5.2) - which represents the objective for biomass maximization
             gp.quicksum(
                 self.scenario.scenario_probabilities[s] *
                 gp.quicksum(
-                    self.w[f, t_hat, t, s]
+                    self.w[l, f, t_hat, t, s]
+                    for l in range(self.l_size)
                     for f in range(self.f_size)
                     for t_hat in range(self.t_size)
-                    for t in range(min(self.growth_sets.loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat], self.t_size - 1),
-                           min(t_hat + self.parameters.max_periods_deployed, self.t_size - 1))
+                    for t in range(self.growth_sets[l].loc[(self.smolt_weights[f], f"Scenario {s}")][t_hat],
+                                   min(t_hat + self.parameters.max_periods_deployed, self.t_size))
                 )
                 for s in range(self.s_size)
             )
@@ -252,6 +290,9 @@ class Model:
         )
 
 
+    """
+    CONSTRAINTS
+    """
     def add_smolt_deployment_constraints(self):
         #FIXED
         self.model.addConstrs(
@@ -320,8 +361,6 @@ class Model:
                     self.parameters.smolt_deployment_upper_bound * self.deploy_type_bin[l, f, 0] >= self.y[l, f, 0]
                     for f in range(self.f_size)
                 )
-
-
     def add_fallowing_constraints(self):
         #Fixed
         self.model.addConstrs(
@@ -372,9 +411,6 @@ class Model:
             for s in range(self.s_size)
             for l in range(self.l_size)
         )
-
-
-
     def add_biomass_development_constraints(self):
         self.model.addConstrs(  # This is constraint (5.9) - which ensures that biomass x = biomass deployed y
             self.x[l, f, t, t, s] == self.y[l,f, t]
@@ -408,7 +444,6 @@ class Model:
                            min(t_hat + self.parameters.max_periods_deployed, self.t_size))
 
         )
-
     def add_employ_bin_forcing_constraints(self):
         self.model.addConstrs(
             self.employ_bin_granular[l,t_hat, t, s] - gp.quicksum(self.x[l,f,t_hat,t,s] for f in range(self.f_size)) <= 0
@@ -432,8 +467,6 @@ class Model:
             for t in range(self.t_size)
             for s in range(self.s_size)
         )
-
-    #Fixed
     def add_MAB_requirement_constraint(self):
         self.model.addConstrs(
             gp.quicksum(self.x[l, f, t_hat, t, s] for f in range(self.f_size)) <= self.sites[l].MAB_capacity
@@ -442,7 +475,6 @@ class Model:
             for t in range(t_hat, min(t_hat + self.parameters.max_periods_deployed, self.t_size +1))
             for s in range(self.s_size)
         )
-
     def add_MAB_company_requirement_constraint(self):
             for t in range(self.t_size + 1):
                 for s in range(self.s_size):
@@ -451,7 +483,6 @@ class Model:
                          <= configs.MAB_COMPANY_LIMIT
                         , name="company MAB limit"
                     )
-
     def add_end_of_horizon_constraint(self):
             for s in range(self.s_size):
                 self.model.addConstr(
@@ -469,8 +500,6 @@ class Model:
                     self.parameters.MAB_company_limit * self.parameters.MAB_util_end
                     , name="Second E0H down"
                 )
-
-
     def add_initial_condition_constraint(self): #TODO: Add initial constraints
         for l in range(self.l_size):
             if self.sites[l].init_biomass > 1:
@@ -483,7 +512,6 @@ class Model:
                     self.deploy_bin[l,0] == 1,
                     name="Initial Condition bin"
                 )
-
     def add_forcing_constraints(self):
         self.model.addConstrs(
             # TODO:This is a forcing constraint that is not in the mathematical model, put it in the model somehow
@@ -504,13 +532,22 @@ class Model:
             for t in range(min(t_hat + self.parameters.max_periods_deployed, self.t_size), self.t_size)
             for s in range(self.s_size)
         )
-
     def add_x_forcing_constraint(self):#TODO: check if used or remove
         self.model.addConstrs(
-            self.x[l, f, t_hat, self.t_size, s] <= self.deploy_bin[l,t_hat] * self.parameters.MAB_company_limit
+            self.x[l, f, t_hat, t, s] <= 0
             for t_hat in range(self.t_size)
-            for l in range(self.l_size)
+            for t in range(0, t_hat)
             for f in range(self.f_size)
+            for l in range(self.l_size)
+            for s in range(self.s_size)
+        )
+
+        self.model.addConstrs(
+            self.x[l, f, t_hat, t, s] <= 0
+            for t_hat in range(self.t_size)
+            for t in range(min(t_hat + self.parameters.max_periods_deployed + 1, self.t_size + 1), self.t_size + 1)
+            for f in range(self.f_size)
+            for l in range(self.l_size)
             for s in range(self.s_size)
         )
 
@@ -520,8 +557,6 @@ class Model:
                 self.deploy_bin[0, indice] == 1, #l set to 0 as this should only be used when there is only one site
                 name = "Branching constraint"
             )
-
-
     def add_down_branching_constraints(self):
         for indice in self.branching_variable_indices_down:
             self.model.addConstr(
@@ -529,6 +564,9 @@ class Model:
                 name = "Branching constraint"
             )
 
+    """
+    PRINT FUNCTIONS AND UTILS
+    """
     def print_solution_to_excel(self):
         if self.model.status != GRB.INFEASIBLE:
             i = 0
